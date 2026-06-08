@@ -1,0 +1,354 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, func, text
+from typing import Optional, List
+from datetime import date
+from app.db.database import get_db
+from app.core.deps import get_current_user, get_current_company
+from app.models.user import User, Company
+from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType, Closing
+from app.schemas.accounting import (
+    AccountCreate, AccountResponse, AccountingEntryCreate, AccountingEntryResponse,
+    TrialBalanceResponse, FinancialStatementResponse,
+)
+from app.services.puc_colombia import PUC_COLOMBIA
+
+router = APIRouter()
+
+
+@router.get("/puc", response_model=list[AccountResponse])
+async def get_puc(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Account).where(Account.company_id == company.id).order_by(Account.code)
+    )
+    return [AccountResponse.model_validate(a) for a in result.scalars().all()]
+
+
+@router.post("/puc/seed")
+async def seed_puc(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+    existing = await db.execute(
+        select(Account).where(Account.company_id == company.id).limit(1)
+    )
+    if existing.scalars().first():
+        return {"message": "PUC already seeded for this company"}
+
+    accounts = []
+    for acc in PUC_COLOMBIA:
+        accounts.append(Account(
+            company_id=company.id,
+            code=acc["code"],
+            name=acc["name"],
+            account_type=acc["account_type"],
+            nature=acc["nature"],
+            account_class=acc["account_class"],
+            level=acc["level"],
+            parent_id=None,
+            accepts_movements=acc.get("accepts_movements", False),
+            third_party_required=acc.get("third_party_required", False),
+        ))
+
+    db.add_all(accounts)
+    await db.commit()
+
+    await _build_account_hierarchy(company.id, db)
+    return {"message": f"PUC seeded with {len(accounts)} accounts"}
+
+
+@router.post("/accounts", response_model=AccountResponse)
+async def create_account(
+    request: AccountCreate,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    account = Account(company_id=company.id, **request.model_dump())
+    db.add(account)
+    await db.commit()
+    await db.refresh(account)
+    return AccountResponse.model_validate(account)
+
+
+@router.get("/accounts/{account_id}", response_model=AccountResponse)
+async def get_account(account_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Account).where(Account.id == account_id, Account.company_id == company.id)
+    )
+    account = result.scalars().first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return AccountResponse.model_validate(account)
+
+
+@router.post("/entries", response_model=AccountingEntryResponse)
+async def create_entry(
+    request: AccountingEntryCreate,
+    company: Company = Depends(get_current_company),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    last_entry = await db.execute(
+        select(func.max(AccountingEntry.entry_number)).where(
+            AccountingEntry.company_id == company.id,
+            AccountingEntry.entry_number.like(f"CP-{request.date.strftime('%Y%m')}-%"),
+        )
+    )
+    last_num = last_entry.scalar()
+    next_num = 1
+    if last_num:
+        parts = last_num.split("-")
+        next_num = int(parts[-1]) + 1
+
+    entry_number = f"CP-{request.date.strftime('%Y%m')}-{next_num:04d}"
+
+    entry = AccountingEntry(
+        company_id=company.id,
+        entry_number=entry_number,
+        entry_type=request.entry_type,
+        date=request.date,
+        description=request.description,
+        third_party_id=request.third_party_id,
+        document_type=request.document_type,
+        document_number=request.document_number,
+        created_by=user.id,
+    )
+    db.add(entry)
+    await db.flush()
+
+    for detail in request.details:
+        entry_detail = AccountingEntryDetail(
+            entry_id=entry.id,
+            account_id=detail.account_id,
+            nature=detail.nature,
+            debit=detail.debit,
+            credit=detail.credit,
+            third_party_id=detail.third_party_id,
+            description=detail.description,
+        )
+        db.add(entry_detail)
+
+        account_result = await db.execute(
+            select(Account).where(Account.id == detail.account_id)
+        )
+        account = account_result.scalars().first()
+        if account:
+            if detail.nature == "Debito":
+                account.current_balance += detail.debit - detail.credit
+            else:
+                account.current_balance += detail.credit - detail.debit
+
+    await db.commit()
+    await db.refresh(entry)
+    return AccountingEntryResponse.model_validate(entry)
+
+
+@router.get("/entries", response_model=list[AccountingEntryResponse])
+async def list_entries(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    entry_type: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(AccountingEntry).where(AccountingEntry.company_id == company.id)
+    if start_date:
+        query = query.where(AccountingEntry.date >= start_date)
+    if end_date:
+        query = query.where(AccountingEntry.date <= end_date)
+    if entry_type:
+        query = query.where(AccountingEntry.entry_type == entry_type)
+
+    query = query.order_by(AccountingEntry.date.desc(), AccountingEntry.id.desc()).limit(limit)
+    result = await db.execute(query)
+    return [AccountingEntryResponse.model_validate(e) for e in result.scalars().all()]
+
+
+@router.get("/trial-balance", response_model=list[TrialBalanceResponse])
+async def trial_balance(
+    end_date: date,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    accounts = await db.execute(
+        select(Account).where(
+            Account.company_id == company.id,
+            Account.is_active == True,
+        ).order_by(Account.code)
+    )
+
+    result = []
+    for account in accounts.scalars().all():
+        debit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company.id,
+                AccountingEntry.date <= end_date,
+                AccountingEntry.is_reversed == False,
+            )
+        )
+        credit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company.id,
+                AccountingEntry.date <= end_date,
+                AccountingEntry.is_reversed == False,
+            )
+        )
+
+        debits = float(debit_total.scalar() or 0)
+        credits = float(credit_total.scalar() or 0)
+
+        if account.account_type in [AccountType.ACTIVO, AccountType.GASTO, AccountType.COSTO]:
+            current_balance = account.opening_balance + debits - credits
+        else:
+            current_balance = account.opening_balance + credits - debits
+
+        if account.accepts_movements or abs(current_balance) > 0.01:
+            result.append(TrialBalanceResponse(
+                account_code=account.code,
+                account_name=account.name,
+                previous_balance=account.opening_balance,
+                debits=debits,
+                credits=credits,
+                current_balance=current_balance,
+            ))
+
+    return result
+
+
+@router.get("/balance-sheet", response_model=list[FinancialStatementResponse])
+async def balance_sheet(
+    end_date: date,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await _get_financial_statement(company.id, end_date, db)
+    return [r for r in result if r.balance != 0]
+
+
+@router.get("/income-statement", response_model=list[FinancialStatementResponse])
+async def income_statement(
+    start_date: date,
+    end_date: date,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    income_types = [AccountType.INGRESO, AccountType.GASTO, AccountType.COSTO]
+    accounts = await db.execute(
+        select(Account).where(
+            Account.company_id == company.id,
+            Account.account_type.in_(income_types),
+            Account.is_active == True,
+        ).order_by(Account.code)
+    )
+
+    result = []
+    for account in accounts.scalars().all():
+        debit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company.id,
+                AccountingEntry.date.between(start_date, end_date),
+                AccountingEntry.is_reversed == False,
+            )
+        )
+        credit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company.id,
+                AccountingEntry.date.between(start_date, end_date),
+                AccountingEntry.is_reversed == False,
+            )
+        )
+
+        debits = float(debit_total.scalar() or 0)
+        credits = float(credit_total.scalar() or 0)
+
+        if account.account_type in [AccountType.INGRESO]:
+            balance = credits - debits
+        else:
+            balance = debits - credits
+
+        if abs(balance) > 0.01:
+            result.append(FinancialStatementResponse(
+                account_code=account.code,
+                account_name=account.name,
+                balance=balance,
+            ))
+
+    return result
+
+
+async def _get_financial_statement(company_id: int, end_date: date, db: AsyncSession):
+    real_types = [AccountType.ACTIVO, AccountType.PASIVO, AccountType.PATRIMONIO]
+    accounts = await db.execute(
+        select(Account).where(
+            Account.company_id == company_id,
+            Account.account_type.in_(real_types),
+            Account.is_active == True,
+        ).order_by(Account.code)
+    )
+
+    result = []
+    for account in accounts.scalars().all():
+        debit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company_id,
+                AccountingEntry.date <= end_date,
+                AccountingEntry.is_reversed == False,
+            )
+        )
+        credit_total = await db.execute(
+            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
+                AccountingEntry
+            ).where(
+                AccountingEntryDetail.account_id == account.id,
+                AccountingEntry.company_id == company_id,
+                AccountingEntry.date <= end_date,
+                AccountingEntry.is_reversed == False,
+            )
+        )
+
+        debits = float(debit_total.scalar() or 0)
+        credits = float(credit_total.scalar() or 0)
+
+        if account.account_type == AccountType.ACTIVO:
+            balance = account.opening_balance + debits - credits
+        else:
+            balance = account.opening_balance + credits - debits
+
+        result.append(FinancialStatementResponse(
+            account_code=account.code,
+            account_name=account.name,
+            balance=balance,
+        ))
+
+    return result
+
+
+async def _build_account_hierarchy(company_id: int, db: AsyncSession):
+    accounts = await db.execute(
+        select(Account).where(Account.company_id == company_id).order_by(Account.code)
+    )
+    accounts_dict = {a.code: a for a in accounts.scalars().all()}
+
+    for account in accounts_dict.values():
+        if len(account.code) > 1:
+            parent_code = account.code[:-2]
+            while parent_code and parent_code not in accounts_dict:
+                parent_code = parent_code[:-2]
+            if parent_code and parent_code in accounts_dict:
+                account.parent_id = accounts_dict[parent_code].id
+                account.level = accounts_dict[parent_code].level + 1
+
+    await db.commit()
