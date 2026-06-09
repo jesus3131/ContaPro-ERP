@@ -12,6 +12,31 @@ from app.services.payroll_calculator import PayrollCalculator
 router = APIRouter()
 
 
+@router.get("/periods")
+async def list_periods(
+    year: int | None = None,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(PayrollPeriod).where(PayrollPeriod.company_id == company.id)
+    if year:
+        query = query.where(PayrollPeriod.year == year)
+    query = query.order_by(PayrollPeriod.year.desc(), PayrollPeriod.month.desc())
+    result = await db.execute(query)
+    periods = result.scalars().all()
+    return [
+        {
+            "id": p.id,
+            "period": f"{p.year}-{p.month:02d}",
+            "start_date": p.start_date.isoformat(),
+            "end_date": p.end_date.isoformat(),
+            "payment_date": p.payment_date.isoformat(),
+            "is_closed": p.is_closed,
+        }
+        for p in periods
+    ]
+
+
 @router.post("/periods")
 async def create_period(
     year: int, month: int, period_type: str = "Monthly",

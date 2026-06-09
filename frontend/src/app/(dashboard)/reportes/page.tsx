@@ -27,7 +27,7 @@ export default function ReportesPage() {
         format,
       })
       const token = localStorage.getItem('token')
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/reports/${reportId}?${params}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api/v1'}/reports/${reportId}?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {

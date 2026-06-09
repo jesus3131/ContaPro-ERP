@@ -19,6 +19,5 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    # Las tablas ya existen en Supabase (creadas via migración).
-    # Este método está disponible para desarrollo local si se necesita.
-    pass
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

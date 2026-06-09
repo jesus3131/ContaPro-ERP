@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api/v1'
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean
@@ -7,6 +7,13 @@ interface FetchOptions extends RequestInit {
 async function getToken(): Promise<string | null> {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('token')
+  }
+  return null
+}
+
+function getCompanyId(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('companyId')
   }
   return null
 }
@@ -23,6 +30,10 @@ export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}):
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
+    const companyId = getCompanyId()
+    if (companyId) {
+      headers['X-Company-ID'] = companyId
+    }
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -31,6 +42,12 @@ export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}):
   })
 
   if (!response.ok) {
+    if (response.status === 401 && !skipAuth) {
+      localStorage.removeItem('token')
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
+    }
     const error = await response.json().catch(() => ({ detail: response.statusText }))
     throw new Error(error.detail || `Error ${response.status}`)
   }
@@ -53,6 +70,10 @@ export const api = {
         skipAuth: true,
       }),
     me: () => apiFetch<any>('/auth/me'),
+    companies: () => apiFetch<any[]>('/auth/companies'),
+    selectCompany: (companyId: number) => {
+      localStorage.setItem('companyId', String(companyId))
+    },
   },
   accounting: {
     getPuc: () => apiFetch<any[]>('/accounting/puc'),

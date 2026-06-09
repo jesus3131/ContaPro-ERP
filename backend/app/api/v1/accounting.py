@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, text
+from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import date
 from app.db.database import get_db
@@ -126,7 +127,7 @@ async def create_entry(
         db.add(entry_detail)
 
         account_result = await db.execute(
-            select(Account).where(Account.id == detail.account_id)
+            select(Account).where(Account.id == detail.account_id, Account.company_id == company.id)
         )
         account = account_result.scalars().first()
         if account:
@@ -149,7 +150,9 @@ async def list_entries(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(AccountingEntry).where(AccountingEntry.company_id == company.id)
+    query = select(AccountingEntry).options(
+        selectinload(AccountingEntry.details).selectinload(AccountingEntryDetail.account)
+    ).where(AccountingEntry.company_id == company.id)
     if start_date:
         query = query.where(AccountingEntry.date >= start_date)
     if end_date:

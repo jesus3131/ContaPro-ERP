@@ -1,5 +1,5 @@
 from typing import AsyncGenerator, Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -33,13 +33,15 @@ async def get_current_user(
 async def get_current_company(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    x_company_id: Optional[int] = Header(default=None),
 ) -> Company:
-    result = await db.execute(
-        select(Company).join(UserCompany).where(
-            UserCompany.user_id == current_user.id,
-            UserCompany.is_active == True,
-        )
+    query = select(Company).join(UserCompany).where(
+        UserCompany.user_id == current_user.id,
+        UserCompany.is_active == True,
     )
+    if x_company_id:
+        query = query.where(Company.id == x_company_id)
+    result = await db.execute(query)
     company = result.scalars().first()
     if company is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active company found")
