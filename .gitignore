@@ -14,8 +14,10 @@ build/
 *.egg
 
 # Environment
+.env
 .env.local
 .env.*.local
+backend/.env
 
 # IDE
 .idea/
