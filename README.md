@@ -9,6 +9,7 @@
       <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js"/>
       <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React"/>
       <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind"/>
+      <img src="https://img.shields.io/badge/pnpm-10.33-F69220?style=flat-square&logo=pnpm" alt="pnpm"/>
       <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql" alt="PostgreSQL"/>
       <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase" alt="Supabase"/>
       <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker" alt="Docker"/>
@@ -32,23 +33,17 @@
 ## 📋 Tabla de Contenido
 
 - [Descripción General](#-descripción-general)
+- [Cambios Recientes y Modificaciones](#-cambios-recientes-y-modificaciones)
 - [Características](#-características)
 - [Stack Tecnológico](#-stack-tecnológico)
 - [Arquitectura del Proyecto](#-arquitectura-del-proyecto)
 - [Módulos](#-módulos)
-  - [Módulo Contable](#módulo-contable)
-  - [Módulo Financiero](#módulo-financiero)
-  - [Módulo Administrativo](#módulo-administrativo)
-  - [Facturación Electrónica DIAN](#facturación-electrónica-dian)
-  - [Módulo de Inventario](#módulo-de-inventario)
-  - [Módulo de Nómina](#módulo-de-nómina)
-  - [Inteligencia Artificial](#inteligencia-artificial)
-  - [Dashboard Inteligente](#dashboard-inteligente)
-  - [Reportes](#reportes)
 - [Cumplimiento Legal Colombiano](#-cumplimiento-legal-colombiano)
-- [Instalación y Despliegue](#-instalación-y-despliegue)
+- [Guía de Despliegue Paso a Paso](#-guía-de-despliegue-paso-a-paso)
   - [Requisitos](#requisitos)
-  - [Desarrollo Local](#desarrollo-local)
+  - [Desarrollo Local (Windows)](#desarrollo-local-windows)
+  - [Desarrollo Local (Linux/Mac)](#desarrollo-local-linuxmac)
+  - [Acceso Multi-dispositivo en LAN](#acceso-multi-dispositivo-en-lan)
   - [Docker Compose](#docker-compose)
   - [Despliegue en Producción](#despliegue-en-producción)
 - [API REST](#-api-rest)
@@ -67,12 +62,69 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 
 ---
 
+## 🔄 Cambios Recientes y Modificaciones
+
+### Migración a pnpm
+- Se reemplazó npm por **pnpm** (v10.33.2) como gestor de paquetes del frontend
+- `package-lock.json` reemplazado por `pnpm-lock.yaml` (más rápido, deterministico, ahorra espacio)
+- Comando de instalación: `pnpm install` (en lugar de `npm install`)
+- Comando de desarrollo: `pnpm dev` (en lugar de `npm run dev`)
+
+### Proxy API para acceso multi-dispositivo
+- El frontend ahora usa rutas relativas (`/api/...`) que pasan por **Next.js Rewrites**
+- Configurado en `frontend/next.config.ts`: `/api/:path*` → `BACKEND_URL/api/v1/:path*`
+- Variable de entorno `BACKEND_URL` en `frontend/.env.local`
+- Permite acceder desde cualquier IP de la red local (ej: `http://192.168.56.1:3000`)
+- Elimina problemas de CORS al mantener el mismo origen
+
+### Carga con Skeleton Loaders
+- **Dashboard**: esqueleto de 6 cards + placeholders de gráficos
+- **Facturación**: cards de estadísticas + tabla placeholder
+- **Contabilidad**: cards + tabla placeholder
+- **Financiero**: 3 cards pulsantes
+- **Inventario**: 4 stats cards + tabla placeholder
+- Mejora la percepción de velocidad: el usuario ve la estructura de la página inmediatamente
+
+### Corrección AuthProvider (Flash Blanco)
+- Reemplazado `return null` por un **spinner de carga** centrado
+- El usuario ya no ve un flash blanco al navegar entre páginas
+- Redirige a `/` automáticamente si ya hay token y está en `/login`
+
+### Mejoras de UX
+- **Manejo de errores en Dashboard**: si falla la API, muestra botón **"Reintentar"** en lugar de datos en cero
+- **Año dinámico en Financiero**: reemplazado `2026` hardcodeado por `new Date().getFullYear()`
+- **Confirmación modal en Facturación**: reemplazado `confirm()` nativo por modal personalizado
+- **Pestañas Login/Registro**: la página de login ahora tiene tabs para iniciar sesión o registrarse
+
+### Seed Automático (Admin por Defecto)
+- `backend/app/db/seed.py`: al iniciar el backend, si no existe un usuario `admin`, lo crea automáticamente
+- También crea una empresa por defecto (`Mi Empresa S.A.S.`)
+- Credenciales iniciales: **usuario:** `admin` / **contraseña:** `admin123`
+
+### Comentarios en Español (Documentación)
+- Todos los archivos del proyecto (74 en total) incluyen comentarios descriptivos en español
+- Cada archivo explica su propósito, módulo y funcionalidades principales
+- Backend: formato `# Módulo: ... # Propósito: ...`
+- Frontend: formato `{'/* Componente: ... Propósito: ... */}`
+- Facilita la incorporación de nuevos miembros al equipo
+
+### Backend: Endpoints Adicionales
+- **Clientes/Proveedores/Empleados**: CRUD completo con rutas separadas
+  - `/clients/suppliers` y `/clients/employees` (declarados antes de `/{client_id}`)
+  - Schemas `SupplierUpdate` y `EmployeeUpdate` para actualización parcial
+- **Reportes**: 5 endpoints adicionales
+  - `trial-balance`, `accounts-receivable`, `inventory-report`, `payroll-report`, `tax-report`
+  - `report_generator.py` actualizado con títulos para todos los tipos de reporte
+
+---
+
 ## ✨ Características
 
 | Característica | Descripción |
 |---|---|
 | 🌐 **Interfaz Moderna** | Diseño UI/UX profesional con tema claro/oscuro y responsive (PC, tablet, móvil) |
 | 📊 **Dashboard Ejecutivo** | KPIs en tiempo real, gráficos interactivos (barras, líneas, áreas, pie) |
+| ⏱ **Skeleton Loaders** | Carga visual inmediata en todas las páginas |
 | 🏢 **Multiempresa** | Gestión de múltiples empresas desde una sola cuenta |
 | 👥 **Multiusuario** | Roles y permisos (admin, contador, auditor, viewer) |
 | ☁️ **Cloud Native** | Arquitectura en la nube con Docker, Kubernetes y Supabase |
@@ -93,9 +145,11 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 | [React](https://react.dev/) | 19.0 | Biblioteca UI |
 | [TypeScript](https://www.typescriptlang.org/) | 5.6 | Tipado estático |
 | [Tailwind CSS](https://tailwindcss.com/) | 4.0 | Framework CSS utilitario |
+| [pnpm](https://pnpm.io/) | 10.33 | Gestor de paquetes (rápido, deterministico) |
 | [Recharts](https://recharts.org/) | 2.15 | Gráficos interactivos (barras, líneas, áreas, pie) |
 | [Lucide React](https://lucide.dev/) | 0.460 | Iconos |
 | [date-fns](https://date-fns.org/) | 4.1 | Manipulación de fechas |
+| [jose](https://github.com/panva/jose) | 6.0 | Verificación de tokens JWT en el frontend |
 | [clsx](https://github.com/lukeed/clsx) + [tailwind-merge](https://github.com/dcastil/tailwind-merge) | - | Gestión de clases condicionales |
 
 ### Backend
@@ -108,11 +162,13 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 | [Pydantic](https://docs.pydantic.dev/) | 2.9 | Validación de datos |
 | [asyncpg](https://magicstack.github.io/asyncpg/) | 0.30 | Driver PostgreSQL asíncrono |
 | [python-jose](https://github.com/mpdavis/python-jose) | 3.3 | JWT |
-| [passlib](https://passlib.readthedocs.io/) | 1.7 | Hash de contraseñas |
+| [passlib](https://passlib.readthedocs.io/) | 1.7 | Hash de contraseñas (bcrypt) |
 | [OpenAI](https://openai.com/) | 1.51 | API de IA para análisis financiero |
 | [Pandas](https://pandas.pydata.org/) | 2.2 | Procesamiento de datos |
-| [ReportLab](https://www.reportlab.com/) / WeasyPrint | - | Generación de PDF |
+| [ReportLab](https://www.reportlab.com/) / [WeasyPrint](https://weasyprint.org/) | - | Generación de PDF |
 | [OpenPyXL](https://openpyxl.readthedocs.io/) | 3.1 | Generación de Excel |
+| [Celery](https://docs.celeryq.dev/) | 5.4 | Tareas asíncronas / colas |
+| [Redis](https://redis.io/) | 5.2 | Caché y broker de Celery |
 
 ### Base de Datos e Infraestructura
 
@@ -120,10 +176,8 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 |---|---|---|
 | [PostgreSQL](https://www.postgresql.org/) | 16 | Base de datos relacional |
 | [Supabase](https://supabase.com/) | - | Plataforma PostgreSQL + Auth + RLS |
-| [Redis](https://redis.io/) | 7 | Caché y colas |
 | [Docker](https://www.docker.com/) | - | Contenedores |
-| [Kubernetes](https://kubernetes.io/) | - | Orquestación |
-| [Nginx](https://nginx.org/) | - | Proxy inverso |
+| [Nginx](https://nginx.org/) | - | Proxy inverso / balanceo |
 
 ---
 
@@ -133,7 +187,7 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 contapro-erp/
 ├── backend/                          # API REST con FastAPI
 │   ├── app/
-│   │   ├── api/v1/                   # Endpoints REST
+│   │   ├── api/v1/                   # Endpoints REST (12 routers)
 │   │   │   ├── auth.py               # Autenticación JWT + multiempresa
 │   │   │   ├── accounting.py         # PUC, asientos, balance, resultados
 │   │   │   ├── financial.py          # Indicadores, flujo caja, presupuestos
@@ -145,53 +199,57 @@ contapro-erp/
 │   │   │   ├── ai.py                 # Asistente IA (OpenAI)
 │   │   │   └── dashboard.py          # KPIs y dashboard ejecutivo
 │   │   ├── core/                     # Configuración, seguridad, dependencias
-│   │   ├── db/                       # Conexión a base de datos
-│   │   ├── models/                   # Modelos SQLAlchemy (20+ tablas)
-│   │   ├── schemas/                  # Esquemas Pydantic
-│   │   └── services/                 # Lógica de negocio
+│   │   │   ├── config.py             # Variables de entorno y settings
+│   │   │   ├── security.py           # JWT + bcrypt
+│   │   │   └── deps.py               # Dependencias FastAPI
+│   │   ├── db/                       # Conexión y semilla
+│   │   │   ├── database.py           # Engine, sesiones asíncronas
+│   │   │   └── seed.py               # Seed: admin + empresa por defecto
+│   │   ├── models/                   # Modelos SQLAlchemy (9 archivos, 25+ tablas)
+│   │   ├── schemas/                  # Esquemas Pydantic (6 archivos)
+│   │   └── services/                 # Lógica de negocio (5 archivos)
 │   │       ├── dian.py               # Integración DIAN
 │   │       ├── puc_colombia.py       # PUC Colombia (136 cuentas)
-│   │       ├── payroll_calculator.py # Cálculo de nómina
-│   │       ├── ai_assistant.py       # Asistente IA
+│   │       ├── payroll_calculator.py # Cálculo de nómina colombiana
+│   │       ├── ai_assistant.py       # Asistente IA (OpenAI)
 │   │       └── report_generator.py   # Generador de reportes
+│   ├── alembic/                      # Migraciones de base de datos
 │   ├── Dockerfile
-│   ├── requirements.txt
-│   └── alembic/                      # Migraciones
+│   └── requirements.txt
 │
-├── frontend/                         # Aplicación Next.js
+├── frontend/                         # Aplicación Next.js (pnpm)
 │   ├── src/
 │   │   ├── app/                      # Páginas (App Router)
-│   │   │   ├── login/                # Autenticación
-│   │   │   ├── contabilidad/         # Módulo contable
-│   │   │   ├── financiero/           # Módulo financiero
-│   │   │   ├── facturacion/          # Facturación electrónica
-│   │   │   ├── inventario/           # Inventario
-│   │   │   ├── nomina/               # Nómina
-│   │   │   ├── administrativo/        # Clientes, proveedores, empleados
-│   │   │   ├── reportes/             # Reportes
-│   │   │   ├── ia/                   # Asistente IA
-│   │   │   └── page.tsx              # Dashboard principal
+│   │   │   ├── login/                # Autenticación (login + registro)
+│   │   │   ├── page.tsx              # Dashboard principal con skeletons
+│   │   │   └── (dashboard)/
+│   │   │       ├── contabilidad/     # Módulo contable
+│   │   │       ├── financiero/       # Módulo financiero
+│   │   │       ├── facturacion/      # Facturación electrónica
+│   │   │       ├── inventario/       # Inventario con skeletons
+│   │   │       ├── nomina/           # Nómina
+│   │   │       ├── administrativo/   # Clientes, proveedores, empleados
+│   │   │       ├── reportes/         # Reportes PDF/Excel
+│   │   │       └── ia/               # Asistente IA
 │   │   ├── components/
-│   │   │   ├── ui/                   # Componentes atómicos (Button, Card)
-│   │   │   ├── layout/               # Sidebar, Header
-│   │   │   └── charts/               # Gráficos Recharts
-│   │   ├── lib/                      # Utilidades
-│   │   │   ├── api.ts                # Cliente API REST
-│   │   │   ├── supabase.ts           # Cliente Supabase
-│   │   │   └── utils.ts              # Formateo, fechas, moneda
+│   │   │   ├── ui/                   # Button, Card, Modal, ImageUploader
+│   │   │   ├── layout/               # Sidebar, Header, AuthProvider
+│   │   │   ├── forms/               # ContactForm, EntryForm, InvoiceForm, ProductForm
+│   │   │   └── charts/              # DashboardChart (Recharts)
+│   │   ├── lib/                      # api.ts (cliente proxy), supabase.ts, utils.ts
 │   │   ├── types/                    # Interfaces TypeScript
-│   │   └── styles/                   # Estilos globales Tailwind
-│   ├── Dockerfile
+│   │   └── styles/                   # globals.css (Tailwind + tema claro/oscuro)
+│   ├── .env.local                    # BACKEND_URL=http://localhost:8000
+│   ├── next.config.ts                # Rewrites: /api/* → backend
+│   ├── dockerfile
 │   └── package.json
 │
 ├── infra/                            # Infraestructura
-│   ├── nginx/nginx.conf              # Configuración Nginx
-│   ├── k8s/deployment.yaml           # Despliegue Kubernetes
-│   └── monitoring/                   # Monitoreo
+│   ├── nginx/nginx.conf
+│   └── k8s/deployment.yaml
 │
 ├── docker-compose.yml                # Orquestación Docker
-├── .env                              # Variables de entorno
-└── opencode.json                     # Configuración MCP Supabase
+└── .env                              # Variables de entorno
 ```
 
 ---
@@ -259,14 +317,6 @@ Cumplimiento total con los requisitos técnicos y legales de la DIAN:
 | **Notas Débito** | CUDE | ✅ |
 | **Eventos RADIAN** | Registro de acuses, reclamos | ✅ |
 
-**Proceso de facturación:**
-1. Creación de factura con ítems, impuestos y retenciones
-2. Validación previa contra reglas DIAN
-3. Generación de CUFE/CUDE
-4. Envío a la DIAN mediante API
-5. Seguimiento de estado (aceptada, rechazada)
-6. Registro de eventos RADIAN
-
 ### Módulo de Inventario
 
 | Funcionalidad | Descripción |
@@ -302,16 +352,6 @@ Liquidación automática cumpliendo con la legislación laboral colombiana:
 
 Asistente inteligente integrado con OpenAI (GPT-4) que ofrece:
 
-```mermaid
-graph LR
-    A[Datos Contables] --> B[IA Asistente]
-    B --> C[Análisis Financiero]
-    B --> D[Detección de Errores]
-    B --> E[Predicción Flujo Caja]
-    B --> F[Reportes Ejecutivos]
-    B --> G[Alertas de Riesgo]
-```
-
 | Funcionalidad | Descripción |
 |---|---|
 | **Análisis Financiero** | Interpretación en lenguaje natural de balances |
@@ -322,39 +362,27 @@ graph LR
 
 ### Dashboard Inteligente
 
-Muestra en tiempo real:
-
-| KPI | Tipo de Gráfico | Descripción |
-|---|---|---|
-| Ventas del Período | 📊 Barras / Líneas | Evolución de ingresos |
-| Gastos | 📊 Áreas | Composición y tendencia |
-| Utilidad Neta | 📈 Líneas | Margen de utilidad |
-| Flujo de Caja | 📊 Áreas | Entradas vs salidas |
-| Cuentas por Cobrar | 🥧 Pie | Cartera por antigüedad |
-| Cuentas por Pagar | 🥧 Pie | Obligaciones pendientes |
-| Impuestos | 📊 Barras | IVA, Retefuente, ICA |
-
-**Los gráficos permiten:**
-- 🔍 Zoom y selección de rangos
-- 🔄 Filtros dinámicos por período
-- 📥 Exportación a imagen
-- ⏱ Visualización en tiempo real
+Muestra en tiempo real KPIs con gráficos interactivos (barras, líneas, áreas, pie):
+- Ventas del período, gastos, utilidad neta
+- Flujo de caja, cuentas por cobrar/pagar
+- Impuestos (IVA, Retefuente, ICA)
+- **Skeleton loaders** mientras cargan los datos
 
 ### Reportes
 
 Generación automática en múltiples formatos:
 
-| Reporte | PDF | Excel | CSV | Word |
-|---|---|---|---|---|
-| Balance General | ✅ | ✅ | ✅ | 🚧 |
-| Estado de Resultados | ✅ | ✅ | ✅ | 🚧 |
-| Flujo de Caja | ✅ | ✅ | ✅ | 🚧 |
-| Balance de Prueba | ✅ | ✅ | ✅ | 🚧 |
-| Cartera (CxC) | ✅ | ✅ | ✅ | 🚧 |
-| Inventario | ✅ | ✅ | ✅ | 🚧 |
-| Nómina | ✅ | ✅ | ✅ | 🚧 |
-| Impuestos | ✅ | ✅ | ✅ | 🚧 |
-| Reportes Gerenciales IA | ✅ | 🚧 | 🚧 | 🚧 |
+| Reporte | PDF | Excel | CSV |
+|---|---|---|---|
+| Balance General | ✅ | ✅ | ✅ |
+| Estado de Resultados | ✅ | ✅ | ✅ |
+| Flujo de Caja | ✅ | ✅ | ✅ |
+| Balance de Prueba | ✅ | ✅ | ✅ |
+| Cartera (CxC) | ✅ | ✅ | ✅ |
+| Inventario | ✅ | ✅ | ✅ |
+| Nómina | ✅ | ✅ | ✅ |
+| Impuestos | ✅ | ✅ | ✅ |
+| Reportes Gerenciales IA | ✅ | 🚧 | 🚧 |
 
 ---
 
@@ -383,57 +411,144 @@ Generación automática en múltiples formatos:
 
 ---
 
-## 🔧 Instalación y Despliegue
+## 🔧 Guía de Despliegue Paso a Paso
 
 ### Requisitos
 
-- Node.js 22+
-- Python 3.14+
-- PostgreSQL 16+ (o cuenta en Supabase)
-- Docker y Docker Compose (opcional)
-- Git
+| Herramienta | Versión Mínima | Descarga |
+|---|---|---|
+| Node.js | 22+ | [nodejs.org](https://nodejs.org/) |
+| pnpm | 10+ | `npm install -g pnpm` |
+| Python | 3.14+ | [python.org](https://python.org/) |
+| PostgreSQL | 16+ | [postgresql.org](https://postgresql.org/) |
+| Git | - | [git-scm.com](https://git-scm.com/) |
+| Docker (opcional) | - | [docker.com](https://docker.com/) |
 
-### Desarrollo Local
+---
 
-#### 1. Clonar el repositorio
+### Desarrollo Local (Windows)
 
-```bash
+#### PowerShell (recomendado)
+
+```powershell
+# 1. Clonar el repositorio
 git clone https://github.com/jesus3131/ContaPro-ERP.git
 cd ContaPro-ERP
+
+# 2. Configurar variables de entorno del backend
+cd backend
+copy .env.example .env
+# Editar .env con tus credenciales de PostgreSQL
+
+# 3. Crear y activar entorno virtual
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# 4. Instalar dependencias del backend
+pip install -r requirements.txt
+
+# 5. Iniciar el backend (Terminal 1)
+uvicorn app.main:app --reload --host 0.0.0.0
+# El backend se inicia en http://localhost:8000
+# Docs: http://localhost:8000/docs
+# Seed automático: crea usuario admin / admin123
+
+# 6. En una NUEVA terminal, configurar e iniciar el frontend
+cd frontend
+
+# Crear archivo de entorno del frontend
+New-Item -ItemType File -Name ".env.local"
+Set-Content -Path ".env.local" -Value "BACKEND_URL=http://localhost:8000"
+
+# Instalar dependencias con pnpm
+pnpm install
+
+# Iniciar el frontend
+pnpm dev
+# Se inicia en http://localhost:3000
+
+# 7. Abrir el navegador en http://localhost:3000/login
+#    Usuario: admin / Contraseña: admin123
 ```
 
-#### 2. Configurar variables de entorno
+#### Solución de problemas comunes en Windows
+
+```
+Error: 'pnpm' no se reconoce como un comando
+  → npm install -g pnpm
+
+Error: 'pip' no se reconoce como un comando
+  → Asegúrate de que Python está en PATH
+  → Usa: python -m pip install -r requirements.txt
+
+Error de conexión a PostgreSQL
+  → Verifica que PostgreSQL está instalado y corriendo
+  → Verifica las credenciales en backend/.env
+  → El puerto por defecto es 5432
+
+Error: El archivo .venv/Scripts/Activate.ps1 no se puede cargar
+  → Ejecuta: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  → O usa: .\venv\Scripts\activate.bat (CMD)
+```
+
+---
+
+### Desarrollo Local (Linux/Mac)
 
 ```bash
+# 1. Clonar el repositorio
+git clone https://github.com/jesus3131/ContaPro-ERP.git
+cd ContaPro-ERP
+
+# 2. Backend
+cd backend
 cp .env.example .env
 # Editar .env con tus credenciales
-```
 
-#### 3. Backend
-
-```bash
-cd backend
-python -m venv venv
-# Windows: .\venv\Scripts\activate
-# Linux/Mac: source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
 
-El backend se iniciará en `http://localhost:8000`
-- Documentación interactiva: `http://localhost:8000/docs`
-- Documentación Redoc: `http://localhost:8000/redoc`
-- Health check: `http://localhost:8000/health`
+# Iniciar backend (Terminal 1)
+uvicorn app.main:app --reload --host 0.0.0.0
 
-#### 4. Frontend
-
-```bash
+# 3. Frontend (Terminal 2)
 cd frontend
-npm install
-npm run dev
+echo "BACKEND_URL=http://localhost:8000" > .env.local
+pnpm install
+pnpm dev
 ```
 
-El frontend se iniciará en `http://localhost:3000`
+---
+
+### Acceso Multi-dispositivo en LAN
+
+Para acceder desde otros dispositivos en la misma red (ej: tablet, celular, otro PC):
+
+```powershell
+# 1. Obtener tu IP local
+ipconfig
+# Busca "Dirección IPv4" ej: 192.168.1.10
+
+# 2. Iniciar backend
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --host 0.0.0.0
+
+# 3. Iniciar frontend (se expone en 0.0.0.0 por defecto)
+cd frontend
+pnpm dev
+
+# 4. Desde cualquier dispositivo en la misma red:
+#    http://192.168.1.10:3000/login
+```
+
+**Nota:** El frontend usa un **proxy interno** (Next.js Rewrites) que redirige `/api/*` al backend. Esto significa que:
+- No necesitas configurar CORS
+- No necesitas cambios de configuración por IP
+- Funciona desde cualquier hostname o IP
+
+---
 
 ### Docker Compose
 
@@ -456,35 +571,90 @@ Servicios disponibles:
 |---|---|---|
 | Frontend | 3000 | http://localhost:3000 |
 | Backend API | 8000 | http://localhost:8000 |
+| Documentación API | 8000 | http://localhost:8000/docs |
 | PostgreSQL | 5432 | localhost:5432 |
 | Redis | 6379 | localhost:6379 |
 | Nginx | 80/443 | http://localhost |
 
+---
+
 ### Despliegue en Producción
 
-#### Supabase (Base de Datos)
+#### 1. Base de Datos (Supabase o PostgreSQL propio)
 
 ```bash
-# 1. Crear proyecto en Supabase
+# Opción A: Supabase (recomendado para empezar)
+# 1. Crear proyecto en https://supabase.com
+# 2. Obtener credenciales del project settings
 
-# 2. Configurar .env con credenciales
-DATABASE_URL=postgresql://postgres:password@db.<project-ref>.supabase.co:5432/postgres
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_ANON_KEY=<tu-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
-
-# 3. Aplicar migraciones (ya ejecutadas via MCP)
+# Opción B: PostgreSQL propio
+# Instalar y configurar PostgreSQL 16+
 ```
 
-#### Kubernetes
+#### 2. Configurar variables de entorno
 
 ```bash
-kubectl apply -f infra/k8s/deployment.yaml
+# backend/.env
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_ANON_KEY=<tu-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
+SECRET_KEY=<generar-clave-segura>
+CORS_ORIGINS=["https://tudominio.com"]
 
-# Verificar estado
-kubectl get pods -l app=contapro
-kubectl get services
-kubectl get ingress
+# frontend/.env.local
+BACKEND_URL=https://api.tudominio.com
+```
+
+#### 3. Construir y desplegar
+
+```bash
+# Backend
+cd backend
+docker build -t contapro-backend .
+docker run -d --name contapro-backend -p 8000:8000 contapro-backend
+
+# Frontend
+cd frontend
+pnpm install
+pnpm build
+pnpm start   # Inicia en puerto 3000
+
+# O con Docker:
+docker build -t contapro-frontend .
+docker run -d --name contapro-frontend -p 3000:3000 contapro-frontend
+```
+
+#### 4. Proxy Inverso con Nginx
+
+```nginx
+# /etc/nginx/sites-available/contapro
+server {
+    listen 80;
+    server_name tudominio.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # API (opcional, el frontend ya hace proxy)
+    location /api/ {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+#### 5. Verificar el despliegue
+
+```
+http://tudominio.com        → Frontend
+http://tudominio.com/login  → Login (admin / admin123)
+http://tudominio.com/docs   → Documentación API
+http://tudominio.com/health → Health check
 ```
 
 ---
@@ -520,23 +690,37 @@ GET    /api/v1/accounting/income-statement       # Estado de resultados
 ```
 GET    /api/v1/financial/indicators    # Indicadores financieros
 GET    /api/v1/financial/cash-flow     # Flujo de caja
-GET    /api/v1/financial/budgets       # Presupuestos
+```
+
+### Clientes / Proveedores / Empleados
+
+```
+GET    /api/v1/clients/                # Listar clientes
+POST   /api/v1/clients/                # Crear cliente
+GET    /api/v1/clients/suppliers       # Listar proveedores
+POST   /api/v1/clients/suppliers       # Crear proveedor
+GET    /api/v1/clients/employees       # Listar empleados
+POST   /api/v1/clients/employees       # Crear empleado
 ```
 
 ### Facturación
 
 ```
-POST   /api/v1/invoicing/invoices                  # Crear factura
 GET    /api/v1/invoicing/invoices                  # Listar facturas
+POST   /api/v1/invoicing/invoices                  # Crear factura
 POST   /api/v1/invoicing/invoices/{id}/validate-dian # Validar DIAN
 POST   /api/v1/invoicing/invoices/{id}/send-dian    # Enviar DIAN
+PUT    /api/v1/invoicing/invoices/{id}/cancel       # Anular factura
 ```
 
 ### Inventario
 
 ```
-POST   /api/v1/inventory/products         # Crear producto
 GET    /api/v1/inventory/products         # Listar productos
+POST   /api/v1/inventory/products         # Crear producto
+GET    /api/v1/inventory/products/{id}    # Detalle producto
+PUT    /api/v1/inventory/products/{id}    # Actualizar producto
+DELETE /api/v1/inventory/products/{id}    # Eliminar producto
 POST   /api/v1/inventory/movements       # Registrar movimiento
 GET    /api/v1/inventory/kardex/{id}     # Consultar kardex
 GET    /api/v1/inventory/stock-alerts    # Alertas de stock
@@ -545,7 +729,7 @@ GET    /api/v1/inventory/stock-alerts    # Alertas de stock
 ### Nómina
 
 ```
-POST   /api/v1/payroll/periods           # Crear período
+POST   /api/v1/payroll/periods           # Crear período de nómina
 POST   /api/v1/payroll/settle/{id}       # Liquidar nómina
 GET    /api/v1/payroll/settlements       # Listar liquidaciones
 ```
@@ -553,9 +737,14 @@ GET    /api/v1/payroll/settlements       # Listar liquidaciones
 ### Reportes
 
 ```
-GET    /api/v1/reports/balance-sheet     # Balance General (PDF/Excel/CSV)
-GET    /api/v1/reports/income-statement  # Estado Resultados
-GET    /api/v1/reports/cash-flow         # Flujo de Efectivo
+GET    /api/v1/reports/balance-sheet        # Balance General
+GET    /api/v1/reports/income-statement     # Estado Resultados
+GET    /api/v1/reports/cash-flow            # Flujo de Efectivo
+GET    /api/v1/reports/trial-balance        # Balance de Prueba
+GET    /api/v1/reports/accounts-receivable  # Cartera
+GET    /api/v1/reports/inventory-report     # Inventario
+GET    /api/v1/reports/payroll-report       # Nómina
+GET    /api/v1/reports/tax-report           # Impuestos
 ```
 
 ### Inteligencia Artificial
@@ -608,7 +797,7 @@ companies
 └── closings
 ```
 
-### Listado Completo de Tablas (25)
+### Listado Completo de Tablas (25+)
 
 | # | Tabla | Módulo | Descripción |
 |---|---|---|---|
@@ -642,9 +831,17 @@ companies
 
 ## 🔒 Seguridad
 
+### Autenticación
+
+- **JWT** (JSON Web Tokens) con expiración configurable
+- **Hash de contraseñas** con bcrypt (passlib)
+- Token se almacena en `localStorage` con clave `token`
+- Compañía activa se almacena en `localStorage` con clave `companyId`
+- Integración opcional con Supabase Auth
+
 ### Row Level Security (RLS)
 
-Las 25 tablas tienen RLS habilitado con políticas basadas en la compañía del usuario autenticado:
+Las tablas tienen RLS habilitado con políticas basadas en la compañía del usuario autenticado:
 
 ```sql
 -- Cada usuario solo ve datos de su compañía
@@ -661,18 +858,20 @@ CREATE POLICY "admin access" ON user_companies
   );
 ```
 
-### Autenticación
+### Proxy de API
 
-- JWT (JSON Web Tokens) con expiración configurable
-- Hash de contraseñas con bcrypt
-- Integración con Supabase Auth
-- Tokens de acceso renovables
+El frontend nunca expone la URL del backend al cliente. Todas las llamadas pasan por el proxy de Next.js, lo que:
+- Evita exponer `localhost:8000` al navegador
+- Funciona desde cualquier IP/hostname
+- Elimina la necesidad de configurar CORS para desarrollo multi-dispositivo
 
-### Auditoría
+### Seed Data
 
-- Tabla `audit_logs` registra todas las operaciones CRUD
-- Trazabilidad completa: usuario, acción, entidad, valores anteriores/nuevos
-- Registro de dirección IP
+Al iniciar el backend por primera vez, se crea automáticamente:
+- **Usuario admin**: `admin` / `admin123` (superuser)
+- **Empresa por defecto**: `Mi Empresa S.A.S.` (NIT: 900000000-1)
+
+> ⚠️ **Importante:** Cambia la contraseña del admin inmediatamente después del primer despliegue en producción.
 
 ---
 
@@ -688,8 +887,8 @@ Las contribuciones son bienvenidas. Por favor:
 
 ### Convenciones de código
 
-- **Python**: PEP 8, type hints, docstrings
-- **TypeScript/React**: ESLint, Prettier, componentes funcionales
+- **Python**: PEP 8, type hints, comentarios en español al inicio de cada archivo
+- **TypeScript/React**: ESLint, componentes funcionales, comentarios en español
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/)
 - **Ramas**: `feature/*`, `fix/*`, `refactor/*`, `docs/*`
 
