@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002/api/v1'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean
@@ -55,19 +55,34 @@ export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}):
   return response.json()
 }
 
+export async function apiDownloadBlob(endpoint: string, filename: string): Promise<void> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const companyId = typeof window !== 'undefined' ? localStorage.getItem('companyId') : null
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (companyId) headers['X-Company-ID'] = companyId
+
+  const response = await fetch(`${API_URL}${endpoint}`, { headers })
+  if (!response.ok) throw new Error(`Error ${response.status}`)
+
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
+
 export const api = {
   auth: {
     login: (data: { username: string; password: string }) =>
       apiFetch<{ access_token: string; token_type: string; user: any }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        skipAuth: true,
+        method: 'POST', body: JSON.stringify(data), skipAuth: true,
       }),
     register: (data: { username: string; email: string; full_name: string; password: string }) =>
       apiFetch<{ access_token: string; token_type: string; user: any }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        skipAuth: true,
+        method: 'POST', body: JSON.stringify(data), skipAuth: true,
       }),
     me: () => apiFetch<any>('/auth/me'),
     companies: () => apiFetch<any[]>('/auth/companies'),
@@ -107,11 +122,19 @@ export const api = {
       apiFetch<any>(`/invoicing/invoices/${id}/validate-dian`, { method: 'POST' }),
     sendDian: (id: number) =>
       apiFetch<any>(`/invoicing/invoices/${id}/send-dian`, { method: 'POST' }),
+    cancel: (id: number) =>
+      apiFetch<any>(`/invoicing/invoices/${id}/cancel`, { method: 'PUT' }),
   },
   inventory: {
     getProducts: () => apiFetch<any[]>('/inventory/products'),
     createProduct: (data: any) =>
       apiFetch<any>('/inventory/products', { method: 'POST', body: JSON.stringify(data) }),
+    updateProduct: (id: number, data: any) =>
+      apiFetch<any>(`/inventory/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteProduct: (id: number) =>
+      apiFetch<any>(`/inventory/products/${id}`, { method: 'DELETE' }),
+    getProduct: (id: number) =>
+      apiFetch<any>(`/inventory/products/${id}`),
     createMovement: (data: any) =>
       apiFetch<any>('/inventory/movements', { method: 'POST', body: JSON.stringify(data) }),
     getKardex: (id: number) => apiFetch<any[]>(`/inventory/kardex/${id}`),
@@ -132,6 +155,42 @@ export const api = {
       apiFetch<any[]>(`/dashboard/monthly-evolution?year=${year}`),
     accountsReceivable: () => apiFetch<any>('/dashboard/accounts-receivable'),
   },
+  clients: {
+    list: () => apiFetch<any[]>('/clients/'),
+    create: (data: any) =>
+      apiFetch<any>('/clients/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      apiFetch<any>(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      apiFetch<any>(`/clients/${id}`, { method: 'DELETE' }),
+    get: (id: number) =>
+      apiFetch<any>(`/clients/${id}`),
+  },
+  suppliers: {
+    list: () => apiFetch<any[]>('/clients/suppliers'),
+    create: (data: any) =>
+      apiFetch<any>('/clients/suppliers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      apiFetch<any>(`/clients/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      apiFetch<any>(`/clients/suppliers/${id}`, { method: 'DELETE' }),
+  },
+  employees: {
+    list: () => apiFetch<any[]>('/clients/employees'),
+    create: (data: any) =>
+      apiFetch<any>('/clients/employees', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      apiFetch<any>(`/clients/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      apiFetch<any>(`/clients/employees/${id}`, { method: 'DELETE' }),
+  },
+  reports: {
+    download: (reportId: string, format: string, startDate: string, endDate: string) =>
+      apiDownloadBlob(
+        `/reports/${reportId}?start_date=${startDate}&end_date=${endDate}&format=${format}`,
+        `${reportId}.${format}`
+      ),
+  },
   ai: {
     analyze: (year: number, month: number) =>
       apiFetch<any>(`/ai/analyze?year=${year}&month=${month}`, { method: 'POST' }),
@@ -141,10 +200,5 @@ export const api = {
       apiFetch<any>('/ai/predict-cash-flow', { method: 'POST' }),
     generateReport: (reportType: string) =>
       apiFetch<any>(`/ai/generate-report?report_type=${reportType}`, { method: 'POST' }),
-  },
-  clients: {
-    list: () => apiFetch<any[]>('/clients/'),
-    create: (data: any) =>
-      apiFetch<any>('/clients/', { method: 'POST', body: JSON.stringify(data) }),
   },
 }

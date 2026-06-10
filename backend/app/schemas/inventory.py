@@ -17,6 +17,25 @@ class ProductCreate(BaseModel):
     min_stock: float = 0.0
     costing_method: str = "Promedio"
     location: Optional[str] = None
+    image_url: Optional[str] = None
+
+
+class ProductUpdate(BaseModel):
+    code: Optional[str] = None
+    barcode: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    unit_type: Optional[str] = None
+    cost_price: Optional[float] = None
+    sale_price: Optional[float] = None
+    tax_rate: Optional[float] = None
+    tax_code: Optional[str] = None
+    min_stock: Optional[float] = None
+    costing_method: Optional[str] = None
+    location: Optional[str] = None
+    image_url: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class ProductResponse(BaseModel):
@@ -29,6 +48,7 @@ class ProductResponse(BaseModel):
     current_stock: float
     min_stock: float
     is_active: bool
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True

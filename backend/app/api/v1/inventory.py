@@ -5,7 +5,7 @@ from app.db.database import get_db
 from app.core.deps import get_current_user, get_current_company
 from app.models.user import User, Company
 from app.models.inventory import Product, InventoryMovement, Kardex, MovementType, CostingMethod
-from app.schemas.inventory import ProductCreate, ProductResponse, InventoryMovementCreate, KardexResponse
+from app.schemas.inventory import ProductCreate, ProductUpdate, ProductResponse, InventoryMovementCreate, KardexResponse
 
 router = APIRouter()
 
@@ -40,6 +40,44 @@ async def get_product(product_id: int, company: Company = Depends(get_current_co
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return ProductResponse.model_validate(product)
+
+
+@router.put("/products/{product_id}", response_model=ProductResponse)
+async def update_product(
+    product_id: int,
+    request: ProductUpdate,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id, Product.company_id == company.id)
+    )
+    product = result.scalars().first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    update_data = request.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(product, key, value)
+    await db.commit()
+    await db.refresh(product)
+    return ProductResponse.model_validate(product)
+
+
+@router.delete("/products/{product_id}")
+async def delete_product(
+    product_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id, Product.company_id == company.id)
+    )
+    product = result.scalars().first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    await db.delete(product)
+    await db.commit()
+    return {"message": "Product deleted"}
 
 
 @router.post("/movements")

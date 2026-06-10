@@ -68,6 +68,11 @@ class ReportGenerator:
             "balance_sheet": "Balance General",
             "income_statement": "Estado de Resultados",
             "cash_flow": "Flujo de Efectivo",
+            "trial_balance": "Balance de Prueba",
+            "accounts_receivable": "Cartera - Cuentas por Cobrar",
+            "inventory_report": "Reporte de Inventario",
+            "payroll_report": "Reporte de Nómina",
+            "tax_report": "Reporte de Impuestos",
         }
         title = titles.get(report_type, "Reporte ContaPro ERP")
 

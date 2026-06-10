@@ -8,6 +8,7 @@ from app.models.user import User, Company
 from app.models.invoicing import Invoice, InvoiceItem, CreditNote, DebitNote
 from app.models.clients import Client
 from app.schemas.invoicing import InvoiceCreate, InvoiceResponse, DianValidationResponse
+from datetime import date
 from app.services.dian import DianService
 
 router = APIRouter()
@@ -170,3 +171,20 @@ async def send_to_dian(
 
     await db.commit()
     return response
+
+
+@router.put("/invoices/{invoice_id}/cancel")
+async def cancel_invoice(
+    invoice_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Invoice).where(Invoice.id == invoice_id, Invoice.company_id == company.id)
+    )
+    invoice = result.scalars().first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    invoice.status = "Cancelled"
+    await db.commit()
+    return {"message": "Invoice cancelled"}
