@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Eye, EyeOff, Sparkles, Shield, Zap, BarChart3 } from 'lucide-react'
 
 export default function LoginPage() {
+  const [tab, setTab] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,6 +26,26 @@ export default function LoginPage() {
       router.push('/')
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await api.auth.register({
+        username,
+        email,
+        full_name: fullName,
+        password,
+      })
+      localStorage.setItem('token', res.access_token)
+      router.push('/')
+    } catch (err: any) {
+      setError(err.message || 'Error al registrarse')
     } finally {
       setLoading(false)
     }
@@ -82,15 +105,50 @@ export default function LoginPage() {
             <p className="text-sm text-gray-500 mt-1">Ingresa a tu empresa</p>
           </div>
 
-          <div className="lg:hidden text-center mb-8">
-            <h2 className="text-xl font-heading font-bold text-gray-900 dark:text-white">Iniciar Sesión</h2>
+          <div className="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button
+              onClick={() => { setTab('login'); setError('') }}
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                tab === 'login'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={() => { setTab('register'); setError('') }}
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                tab === 'register'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Registrarse
+            </button>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={tab === 'login' ? handleLogin : handleRegister} className="space-y-5">
             {error && (
               <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm rounded-xl flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0" />
                 {error}
+              </div>
+            )}
+
+            {tab === 'register' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="input-premium"
+                  placeholder="Juan Pérez"
+                  required
+                />
               </div>
             )}
 
@@ -103,10 +161,26 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input-premium"
-                placeholder="usuario@ejemplo.com"
+                placeholder={tab === 'login' ? 'usuario@ejemplo.com' : 'usuario'}
                 required
               />
             </div>
+
+            {tab === 'register' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Correo Electrónico
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-premium"
+                  placeholder="correo@ejemplo.com"
+                  required
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -119,6 +193,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="input-premium pr-10"
                   placeholder="••••••••"
+                  minLength={tab === 'register' ? 6 : undefined}
                   required
                 />
                 <button
@@ -132,19 +207,25 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" variant="primary" className="w-full h-11" disabled={loading}>
-              {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+              {loading ? 'Procesando...' : tab === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </Button>
-
-            <div className="text-center">
-              <a href="#" className="text-sm text-[#062B5B] dark:text-[#6EEB83] hover:underline font-medium">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
           </form>
 
           <div className="mt-8 pt-6 border-t border-[var(--border)] text-center">
             <p className="text-xs text-gray-400">
-              &copy; 2026 ContaPro ERP Colombia. Todos los derechos reservados.
+              {tab === 'login' ? (
+                <>¿Primera vez?{' '}
+                  <button onClick={() => { setTab('register'); setError('') }} className="text-[#062B5B] dark:text-[#6EEB83] hover:underline font-medium">
+                    Registra tu empresa
+                  </button>
+                </>
+              ) : (
+                <>¿Ya tienes cuenta?{' '}
+                  <button onClick={() => { setTab('login'); setError('') }} className="text-[#062B5B] dark:text-[#6EEB83] hover:underline font-medium">
+                    Inicia sesión
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>
