@@ -46,11 +46,11 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             url = self.DATABASE_URL
             if url.startswith("postgresql://"):
-                scheme = "postgresql+asyncpg://"
+                scheme = "postgresql+psycopg://"
                 rest = url[len("postgresql://"):]
                 return scheme + rest
             return url
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+        return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
 
     model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
 
