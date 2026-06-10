@@ -23,22 +23,19 @@ spec:
         ports:
         - containerPort: 8000
         env:
-        - name: POSTGRES_SERVER
-          value: "postgres-service"
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: contapro-secrets
-              key: db-user
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: contapro-secrets
-              key: db-password
-        - name: POSTGRES_DB
-          value: "contapro_erp"
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://contapro:contapro123@postgres-service:5432/contapro_erp"
         - name: REDIS_URL
           value: "redis://redis-service:6379/0"
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: contapro-secrets
+              key: secret-key
+        - name: CORS_ORIGINS
+          value: '["https://contapro.com"]'
+        - name: DIAN_TEST_MODE
+          value: "true"
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -89,8 +86,8 @@ spec:
         ports:
         - containerPort: 3000
         env:
-        - name: NEXT_PUBLIC_API_URL
-          value: "https://api.contapro.com/api/v1"
+        - name: BACKEND_URL
+          value: "http://backend-service:8000"
         resources:
           requests:
             memory: "256Mi"
@@ -98,6 +95,26 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "400m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: redis
 ---
 apiVersion: v1
 kind: Service
@@ -128,10 +145,10 @@ kind: Ingress
 metadata:
   name: contapro-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   rules:
-  - host: contapro.local
+  - host: contapro.com
     http:
       paths:
       - path: /
@@ -141,10 +158,3 @@ spec:
             name: frontend-service
             port:
               number: 3000
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: backend-service
-            port:
-              number: 8000
