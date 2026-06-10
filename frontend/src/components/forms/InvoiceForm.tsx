@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: InvoiceForm
+   Propósito: Formulario de factura: crear/editar facturas con items */}
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

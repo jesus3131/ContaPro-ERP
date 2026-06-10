@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Login / Registro
+   Propósito: Autenticación de usuarios con formularios de inicio de sesión y registro de empresa
+   Módulo: Autenticación */}
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'

@@ -1,3 +1,6 @@
+# Módulo: invoicing
+# Propósito: Facturación electrónica — creación de facturas, validación DIAN, envío y anulación.
+# Funcionalidades principales: Creación de facturas con cálculo de impuestos, validación contra la DIAN, envío electrónico con CUFE y anulación de facturas.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func

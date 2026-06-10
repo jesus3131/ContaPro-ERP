@@ -1,3 +1,6 @@
+# Módulo: reports
+# Propósito: Generación de reportes descargables en PDF/Excel — balance general, estados financieros, inventario, nómina e impuestos.
+# Funcionalidades principales: Descarga de balance general, estado de resultados, flujo de caja, balance de prueba, cuentas por cobrar, reporte de inventario, nómina y reporte tributario.
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession

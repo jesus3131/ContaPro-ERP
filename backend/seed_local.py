@@ -1,3 +1,6 @@
+# seed_local.py
+# Propósito: Script local para sembrar datos de prueba - NO USAR EN PRODUCCIÓN
+
 import asyncio
 import bcrypt
 from datetime import date, datetime, timedelta

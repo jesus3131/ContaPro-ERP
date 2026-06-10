@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Contabilidad
+   Propósito: Plan Único de Cuentas (PUC), asientos contables, balance de prueba y estados financieros
+   Módulo: Contabilidad */}
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'

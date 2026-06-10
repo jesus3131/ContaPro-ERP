@@ -1,3 +1,6 @@
+# Módulo: inventory
+# Propósito: Control de inventario — productos, movimientos de stock, kardex y alertas de inventario.
+# Funcionalidades principales: CRUD de productos, registro de entradas/salidas con actualización de costos, consulta de kardex valorizado y alertas de stock mínimo.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

@@ -1,3 +1,6 @@
+# Modelo: Inventario
+# Propósito: Controla los productos, movimientos de inventario y registro kardex con métodos de costeo (Promedio, PEPS, UEPS)
+# Tablas principales: products, inventory_movements, kardex
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

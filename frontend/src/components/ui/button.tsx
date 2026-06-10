@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: Button
+   Propósito: Botón reutilizable con variantes: primary, secondary, ghost, danger */}
 import { cn } from '@/lib/utils'
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 

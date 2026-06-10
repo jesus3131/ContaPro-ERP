@@ -1,3 +1,6 @@
+# Módulo: payroll
+# Propósito: Gestión de nómina — períodos de pago, liquidación de empleados y asentamientos contables.
+# Funcionalidades principales: Creación y consulta de períodos de nómina, liquidación de empleados con cálculo de prestaciones sociales y consulta de asentamientos.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Financiero
+   Propósito: Indicadores financieros, estructura financiera, flujo de caja y análisis de cuentas
+   Módulo: Financiero */}
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

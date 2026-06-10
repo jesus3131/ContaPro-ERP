@@ -1,3 +1,6 @@
+# Módulo: auth
+# Propósito: Gestión de autenticación y registro — login, registro de usuarios y administración de empresas.
+# Funcionalidades principales: Inicio de sesión con JWT, registro de nuevos usuarios, creación y listado de empresas asociadas al usuario.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

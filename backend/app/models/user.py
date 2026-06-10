@@ -1,3 +1,6 @@
+# Modelo: Usuarios y Empresas
+# Propósito: Gestiona usuarios del sistema, empresas registradas, asignación de usuarios a empresas y registro de auditoría
+# Tablas principales: companies, users, user_companies, audit_logs
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

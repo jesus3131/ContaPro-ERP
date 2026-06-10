@@ -1,3 +1,6 @@
+# Modelo: Banca
+# Propósito: Gestiona cuentas bancarias, transacciones y conciliaciones bancarias de la empresa
+# Tablas principales: bank_accounts, bank_transactions
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

@@ -1,3 +1,6 @@
+# Módulo: financial
+# Propósito: Indicadores financieros, flujo de caja y presupuestos para análisis económico de la empresa.
+# Funcionalidades principales: Cálculo de liquidez, endeudamiento y rentabilidad; consulta de flujo de caja por período y visualización de presupuestos.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func

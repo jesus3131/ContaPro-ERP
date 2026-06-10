@@ -1,3 +1,5 @@
+{/* Archivo: index.ts
+   Propósito: Tipos compartidos TypeScript — interfaces para todos los modelos del sistema */}
 export interface Company {
   id: number
   name: string

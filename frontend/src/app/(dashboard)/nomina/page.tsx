@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Nómina Electrónica
+   Propósito: Creación de períodos de nómina, liquidación automática, cálculo de prestaciones sociales y deducciones
+   Módulo: Nómina */}
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

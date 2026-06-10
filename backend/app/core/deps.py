@@ -1,3 +1,6 @@
+# deps.py
+# Propósito: Dependencias FastAPI: obtener usuario actual, verificar permisos
+
 from fastapi import Depends, HTTPException, status, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession

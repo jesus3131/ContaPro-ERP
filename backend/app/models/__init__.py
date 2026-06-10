@@ -1,3 +1,6 @@
+# Modelo: Inicializador de modelos
+# Propósito: Centraliza la importación de todos los modelos SQLAlchemy para facilitar su uso en la aplicación
+# Tablas principales: Ninguna (solo reexporta modelos)
 from app.models.user import User, Company, UserCompany, AuditLog
 from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, Closing
 from app.models.clients import Client, Supplier, Employee

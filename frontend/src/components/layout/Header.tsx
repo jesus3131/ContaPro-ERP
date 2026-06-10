@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: Header
+   Propósito: Header superior: breadcrumb, selector de empresa, tema, perfil, cerrar sesión */}
 import { Search, Bell, Moon, Sun, User, LogOut, ChevronDown, Sparkles, Settings } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'

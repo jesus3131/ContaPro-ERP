@@ -1,3 +1,5 @@
+# Módulo: payroll_calculator.py
+# Propósito: Calculadora de nómina colombiana: seguridad social, parafiscales, prestaciones
 from datetime import date
 
 

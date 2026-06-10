@@ -1,3 +1,5 @@
+# Módulo: report_generator.py
+# Propósito: Generador de reportes: PDF y Excel para todos los módulos
 from fastapi.responses import Response
 from io import BytesIO
 from datetime import datetime

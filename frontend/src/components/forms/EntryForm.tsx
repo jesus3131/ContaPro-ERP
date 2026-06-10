@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: EntryForm
+   Propósito: Formulario de asiento contable: crear/editar asientos contables */}
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

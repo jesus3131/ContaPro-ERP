@@ -1,3 +1,6 @@
+# Módulo: accounting
+# Propósito: Gestión contable — PUC (Plan Único de Cuentas), asientos contables, balance de prueba y estados financieros.
+# Funcionalidades principales: CRUD de cuentas, siembra del PUC colombiano, creación y consulta de asientos contables, balance de comprobación, balance general y estado de resultados.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, text

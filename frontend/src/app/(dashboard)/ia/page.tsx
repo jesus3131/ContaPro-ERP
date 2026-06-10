@@ -1,4 +1,7 @@
 'use client'
+{/* Página: ContaPro AI
+   Propósito: Análisis financiero inteligente, detección de errores contables, predicción de flujo de caja y reportes ejecutivos
+   Módulo: Inteligencia Artificial */}
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'

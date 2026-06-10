@@ -1,3 +1,6 @@
+# Módulo: clients
+# Propósito: CRUD completo de clientes, proveedores y empleados para el ERP.
+# Funcionalidades principales: Creación, consulta, actualización y eliminación de clientes, proveedores y empleados por empresa.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

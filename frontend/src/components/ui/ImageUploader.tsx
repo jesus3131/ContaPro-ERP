@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: ImageUploader
+   Propósito: Subida de imágenes: previsualización, arrastrar y soltar, URL */}
 import { useRef, useState } from 'react'
 import { Camera, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'

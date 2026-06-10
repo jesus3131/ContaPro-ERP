@@ -1,3 +1,6 @@
+# seed.py
+# Propósito: Datos semilla: creación de usuario admin y empresa por defecto
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import async_session

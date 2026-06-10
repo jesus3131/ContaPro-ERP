@@ -1,3 +1,6 @@
+# 02dbdb202e3f_add_image_url_to_products.py
+# Propósito: Migración: añadir columna image_url a productos
+
 """add_image_url_to_products
 
 Revision ID: 02dbdb202e3f

@@ -1,3 +1,6 @@
+# main.py
+# Propósito: Punto de entrada de la aplicación FastAPI: routers, middleware CORS, startup
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings

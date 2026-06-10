@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: DashboardChart
+   Propósito: Gráfico de dashboard: barras, líneas para evolución mensual */}
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,

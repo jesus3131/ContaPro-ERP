@@ -1,3 +1,6 @@
+{/* Página: Layout Raíz
+   Propósito: Proveedor de autenticación, configuración global de fuentes, metadatos y estructura HTML base
+   Módulo: Global */}
 import { AuthProvider } from '@/components/layout/AuthProvider'
 import '@/styles/globals.css'
 

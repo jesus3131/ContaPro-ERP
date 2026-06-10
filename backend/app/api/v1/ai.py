@@ -1,3 +1,6 @@
+# Módulo: ai
+# Propósito: Integración con inteligencia artificial para análisis financiero, detección de errores contables, predicción de flujo de caja y generación de reportes automatizados.
+# Funcionalidades principales: Análisis de estados financieros con IA, detección de anomalías en asientos, predicción de flujo de efectivo y generación de reportes narrativos.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

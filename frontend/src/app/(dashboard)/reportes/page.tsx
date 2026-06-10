@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Reportes
+   Propósito: Generación y descarga de reportes financieros y contables en formatos PDF, Excel y CSV
+   Módulo: Reportes */}
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'

@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Facturación Electrónica
+   Propósito: Listado de facturas, creación, validación DIAN, envío y anulación de facturas electrónicas
+   Módulo: Facturación */}
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'

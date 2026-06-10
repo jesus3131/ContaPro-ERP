@@ -1,3 +1,6 @@
+# Módulo: dashboard
+# Propósito: Resumen ejecutivo del negocio — indicadores clave, evolución mensual y cuentas por cobrar.
+# Funcionalidades principales: Dashboard con totales de activos/pasivos/patrimonio/ingresos, evolución mensual de movimientos contables y estado de cuentas por cobrar.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func

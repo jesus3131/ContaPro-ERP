@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: Sidebar
+   Propósito: Sidebar de navegación: menú de módulos con iconos, colapsable */}
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'

@@ -1,3 +1,5 @@
+# Módulo: auth.py
+# Propósito: Esquemas Pydantic para autenticación: login, registro, tokens, empresas
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime

@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Inventario
+   Propósito: Gestión de productos, movimientos de inventario, kardex, alertas de stock mínimo y valoración
+   Módulo: Inventario */}
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

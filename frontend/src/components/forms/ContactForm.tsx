@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: ContactForm
+   Propósito: Formulario de contacto: crear/editar clientes, proveedores, empleados */}
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'

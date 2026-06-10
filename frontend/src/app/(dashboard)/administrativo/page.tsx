@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Administrativo
+   Propósito: Gestión de clientes, proveedores y empleados con tabs, búsqueda, edición y eliminación
+   Módulo: Administrativo */}
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'

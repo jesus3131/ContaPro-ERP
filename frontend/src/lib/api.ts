@@ -1,3 +1,5 @@
+{/* Archivo: api.ts
+   Propósito: Cliente API centralizado — todas las llamadas a endpoints del backend, manejo de autenticación y tokens */}
 const API_URL = '/api'
 
 interface FetchOptions extends RequestInit {

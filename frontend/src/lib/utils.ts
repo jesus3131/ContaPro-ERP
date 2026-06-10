@@ -1,3 +1,5 @@
+{/* Archivo: utils.ts
+   Propósito: Utilidades generales — formato de moneda, fechas, números de documento */}
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 

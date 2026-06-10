@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: ProductForm
+   Propósito: Formulario de producto: crear/editar productos del inventario */}
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'

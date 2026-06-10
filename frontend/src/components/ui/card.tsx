@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: Card, CardHeader, CardContent, StatCard
+   Propósito: Tarjeta reutilizable: card, card header, card content */}
 import { cn } from '@/lib/utils'
 
 interface CardProps {

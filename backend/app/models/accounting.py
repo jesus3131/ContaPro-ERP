@@ -1,3 +1,6 @@
+# Modelo: Contabilidad
+# Propósito: Define las estructuras contables del sistema, incluyendo catálogo de cuentas, asientos contables y cierres periódicos
+# Tablas principales: accounts, accounting_entries, accounting_entry_details, closings
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

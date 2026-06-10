@@ -1,3 +1,5 @@
+# Módulo: puc_colombia.py
+# Propósito: Plan Único de Cuentas colombiano: catálogo de cuentas PUC
 PUC_COLOMBIA = [
     {"code": "1", "name": "ACTIVO", "account_type": "Activo", "nature": "Deudora", "account_class": "Real", "level": 1},
     {"code": "11", "name": "DISPONIBLE", "account_type": "Activo", "nature": "Deudora", "account_class": "Real", "level": 2},

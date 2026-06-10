@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: Modal
+   Propósito: Modal reutilizable: overlay, contenido, botón de cierre */}
 import { useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'

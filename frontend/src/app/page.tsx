@@ -1,4 +1,7 @@
 'use client'
+{/* Página: Dashboard Principal
+   Propósito: Resumen ejecutivo con KPIs financieros, gráficos de evolución mensual, indicadores y cuentas por cobrar
+   Módulo: Dashboard */}
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'

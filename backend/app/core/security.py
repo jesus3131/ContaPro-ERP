@@ -1,3 +1,6 @@
+# security.py
+# Propósito: Seguridad: hash de contraseñas, creación/verificación de tokens JWT
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from jose import jwt, JWTError

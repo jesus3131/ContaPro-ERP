@@ -1,4 +1,6 @@
 'use client'
+{/* Componente: AuthProvider
+   Propósito: Provider de autenticación: verifica token, redirige a login, maneja sidebar/header */}
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
