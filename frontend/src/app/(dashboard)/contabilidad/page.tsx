@@ -48,6 +48,29 @@ export default function ContabilidadPage() {
     { label: 'Total Débitos', value: formatCurrency(entries.reduce((s, e) => s + (e.details?.reduce((sd: number, d: any) => sd + d.debit, 0) || 0), 0)), icon: DollarSign, color: '#f59e0b', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
   ]
 
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header gradient-primary">
+          <div className="page-header-decoration" /><div className="page-header-decoration-2" />
+          <div className="page-header-content"><div className="h-8 w-48 bg-white/20 rounded-lg animate-pulse" /></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card-premium p-5 animate-pulse">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header gradient-primary">

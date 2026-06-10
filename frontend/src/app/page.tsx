@@ -39,10 +39,38 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl p-4 bg-gray-100 dark:bg-gray-800 animate-pulse">
+              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+              <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-80 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          <div className="space-y-6">
+            <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-[#062B5B] dark:text-[#6EEB83] mx-auto mb-4" />
-          <p className="text-sm text-gray-500">Cargando dashboard...</p>
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Activity className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-lg font-heading font-bold text-gray-900 dark:text-white mb-2">Error al cargar datos</h2>
+          <p className="text-sm text-gray-500 mb-4">No se pudieron obtener los datos del dashboard. Verifica que el backend esté corriendo.</p>
+          <Button variant="primary" size="sm" onClick={loadData}>Reintentar</Button>
         </div>
       </div>
     )

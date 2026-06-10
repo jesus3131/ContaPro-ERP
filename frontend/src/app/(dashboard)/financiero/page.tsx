@@ -12,7 +12,8 @@ export default function FinancieroPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.financial.indicators(2026).then(setIndicators).catch(console.error).finally(() => setLoading(false))
+    setLoading(true)
+    api.financial.indicators(new Date().getFullYear()).then(setIndicators).catch(console.error).finally(() => setLoading(false))
   }, [])
 
   const indicatorCards = [
@@ -21,11 +22,32 @@ export default function FinancieroPage() {
     { label: 'ROE', value: indicators?.roe?.value || 0, suffix: '%', interpretation: indicators?.roe?.interpretation || 'Rendimiento sobre patrimonio', icon: Activity, color: '#10b981' },
   ]
 
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="page-header gradient-card-primary">
+          <div className="page-header-decoration" /><div className="page-header-decoration-2" />
+          <div className="page-header-content">
+            <div className="h-8 w-48 bg-white/20 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card-premium p-5 animate-pulse">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+              <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header gradient-card-primary">
-        <div className="page-header-decoration" />
-        <div className="page-header-decoration-2" />
+        <div className="page-header-decoration" /><div className="page-header-decoration-2" />
         <div className="page-header-content">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -37,7 +59,7 @@ export default function FinancieroPage() {
                 <p className="text-sm text-blue-200">Indicadores, presupuestos y flujo de caja</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="bg-white/10 text-white hover:bg-white/20 border-none">
+            <Button variant="ghost" size="sm" onClick={() => { window.location.reload() }} className="bg-white/10 text-white hover:bg-white/20 border-none">
               <RefreshCw className="w-4 h-4 mr-1" /> Actualizar
             </Button>
           </div>
