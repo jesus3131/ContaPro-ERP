@@ -1,6 +1,7 @@
 # config.py
 # Propósito: Configuración general: variables de entorno, CORS, base de datos, API
 
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
@@ -43,6 +44,11 @@ class Settings(BaseSettings):
 
     @property
     def async_database_url(self) -> str:
+        # Use SQLite for local development if PostgreSQL is not available
+        use_sqlite = os.getenv("USE_SQLITE", "false").lower() == "true"
+        if use_sqlite:
+            return "sqlite+aiosqlite:///./contapro_erp.db"
+        
         if self.DATABASE_URL:
             url = self.DATABASE_URL
             if url.startswith("postgresql://"):

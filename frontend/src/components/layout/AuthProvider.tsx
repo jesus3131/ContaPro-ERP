@@ -20,11 +20,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.classList.add('dark')
     }
     const token = localStorage.getItem('token')
+    const companyId = localStorage.getItem('companyId')
+
     if (!token && !isLogin) {
       router.replace('/login')
+    } else if (token) {
+      if (isLogin) {
+        if (companyId) router.replace('/')
+        else router.replace('/select-company')
+      } else if (pathname === '/select-company' && companyId) {
+        router.replace('/')
+      } else if (!companyId && pathname !== '/select-company') {
+        router.replace('/select-company')
+      } else {
+        setChecking(false)
+      }
     } else {
-      if (token && isLogin) router.replace('/')
-      else setChecking(false)
+      setChecking(false)
     }
   }, [pathname])
 

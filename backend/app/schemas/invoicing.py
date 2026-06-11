@@ -30,16 +30,25 @@ class InvoiceCreate(BaseModel):
 class InvoiceResponse(BaseModel):
     id: int
     invoice_number: str
-    prefix: Optional[str]
+    prefix: Optional[str] = None
     issue_date: date
-    due_date: Optional[date]
-    client_name: Optional[str]
-    subtotal: float
-    tax_amount: float
-    total: float
-    status: str
-    dian_status: Optional[str]
-    cufe: Optional[str]
+    due_date: Optional[date] = None
+    client_id: int
+    client_name: Optional[str] = None
+    invoice_type: str = "FVE"
+    payment_method: Optional[str] = None
+    payment_form: Optional[str] = None
+    currency: str = "COP"
+    subtotal: float = 0.0
+    discount: float = 0.0
+    tax_amount: float = 0.0
+    total: float = 0.0
+    retention_amount: float = 0.0
+    status: str = "Draft"
+    dian_status: Optional[str] = None
+    cufe: Optional[str] = None
+    notes: Optional[str] = None
+    created_by: Optional[int] = None
 
     class Config:
         from_attributes = True

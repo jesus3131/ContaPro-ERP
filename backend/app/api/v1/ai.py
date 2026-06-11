@@ -4,6 +4,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import calendar
 from datetime import date
 from app.db.database import get_db
 from app.core.deps import get_current_company
@@ -25,7 +26,7 @@ async def analyze_financials(
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=400, detail="OpenAI API key not configured")
 
-    end_date = date(year, min(month, 12), 28)
+    end_date = date(year, min(month, 12), calendar.monthrange(year, min(month, 12))[1])
     accounts = await db.execute(
         select(Account).where(
             Account.company_id == company.id,
@@ -124,7 +125,7 @@ async def predict_cash_flow(
 
     monthly_data = []
     for m in range(1, 13):
-        end_date = date(2026, min(m, 12), 28)
+        end_date = date(date.today().year, m, calendar.monthrange(date.today().year, m)[1])
         entries = await db.execute(
             select(AccountingEntryDetail, AccountingEntry).join(AccountingEntry).where(
                 AccountingEntryDetail.account_id.in_(cash_ids),

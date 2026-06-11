@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/Modal'
 import { ContactForm } from '@/components/forms/ContactForm'
+import { useToast } from '@/components/ui/toast'
 import { Building2, Users, UserPlus, RefreshCw, Briefcase, Search, Pencil, Trash2 } from 'lucide-react'
 
 type TabType = 'clients' | 'suppliers' | 'employees'
 
 export default function AdminPage() {
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('clients')
   const [clients, setClients] = useState<any[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
@@ -50,6 +52,7 @@ export default function AdminPage() {
   const handleSave = () => {
     setModalOpen(false)
     setEditingItem(null)
+    toast(editingItem ? 'Registro actualizado exitosamente' : 'Registro creado exitosamente', 'success')
     if (activeTab === 'clients') loadClients()
     else if (activeTab === 'suppliers') loadSuppliers()
     else loadEmployees()
@@ -62,10 +65,11 @@ export default function AdminPage() {
       if (type === 'clients') await api.clients.delete(id)
       else if (type === 'suppliers') await api.suppliers.delete(id)
       else await api.employees.delete(id)
+      toast('Registro eliminado exitosamente', 'success')
       setDeleteConfirm(null)
       handleSave()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      toast(err.message || 'Error al eliminar registro', 'error')
     }
   }
 

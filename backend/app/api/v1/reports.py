@@ -4,7 +4,8 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 from datetime import date
 from typing import Optional
 from io import BytesIO
@@ -115,6 +116,27 @@ async def download_tax_report(
     return await generator.generate_report("tax_report", data, format)
 
 
+async def _get_balance_map(company_id: int, account_ids: list[int], db: AsyncSession,
+                           date_field_start=None, date_field_end=None) -> dict[int, tuple[float, float]]:
+    query = select(
+        AccountingEntryDetail.account_id,
+        func.coalesce(func.sum(AccountingEntryDetail.debit), 0),
+        func.coalesce(func.sum(AccountingEntryDetail.credit), 0),
+    ).join(AccountingEntry).where(
+        AccountingEntryDetail.account_id.in_(account_ids),
+        AccountingEntry.company_id == company_id,
+        AccountingEntry.is_reversed == False,
+    )
+    if date_field_end:
+        query = query.where(AccountingEntry.date <= date_field_end if not date_field_start else
+                            AccountingEntry.date.between(date_field_start, date_field_end))
+    elif date_field_start:
+        query = query.where(AccountingEntry.date >= date_field_start)
+    query = query.group_by(AccountingEntryDetail.account_id)
+    rows = await db.execute(query)
+    return {r[0]: (float(r[1]), float(r[2])) for r in rows.all()}
+
+
 async def _get_report_data(company_id: int, end_date: date, db: AsyncSession):
     real_types = [AccountType.ACTIVO, AccountType.PASIVO, AccountType.PATRIMONIO]
     accounts = await db.execute(
@@ -124,26 +146,11 @@ async def _get_report_data(company_id: int, end_date: date, db: AsyncSession):
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_map = await _get_balance_map(company_id, [a.id for a in accounts_list], db, date_field_end=end_date)
     result = []
-    for account in accounts.scalars().all():
-        debits = await db.execute(
-            select(AccountingEntryDetail.debit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credits = await db.execute(
-            select(AccountingEntryDetail.credit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        d = sum((r[0] or 0) for r in debits.all())
-        c = sum((r[0] or 0) for r in credits.all())
+    for account in accounts_list:
+        d, c = balance_map.get(account.id, (0.0, 0.0))
         balance = account.opening_balance + (d - c) if account.account_type == AccountType.ACTIVO else account.opening_balance + (c - d)
         result.append({"code": account.code, "name": account.name, "balance": balance, "type": account.account_type.value})
     return result
@@ -158,26 +165,12 @@ async def _get_income_data(company_id: int, start_date: date, end_date: date, db
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_map = await _get_balance_map(company_id, [a.id for a in accounts_list], db,
+                                          date_field_start=start_date, date_field_end=end_date)
     result = []
-    for account in accounts.scalars().all():
-        debits = await db.execute(
-            select(AccountingEntryDetail.debit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credits = await db.execute(
-            select(AccountingEntryDetail.credit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        d = sum((r[0] or 0) for r in debits.all())
-        c = sum((r[0] or 0) for r in credits.all())
+    for account in accounts_list:
+        d, c = balance_map.get(account.id, (0.0, 0.0))
         balance = (c - d) if account.account_type == AccountType.INGRESO else (d - c)
         result.append({"code": account.code, "name": account.name, "balance": balance, "type": account.account_type.value})
     return result
@@ -190,26 +183,11 @@ async def _get_trial_balance_data(company_id: int, end_date: date, db: AsyncSess
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_map = await _get_balance_map(company_id, [a.id for a in accounts_list], db, date_field_end=end_date)
     result = []
-    for account in accounts.scalars().all():
-        debits = await db.execute(
-            select(AccountingEntryDetail.debit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credits = await db.execute(
-            select(AccountingEntryDetail.credit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        d = sum((r[0] or 0) for r in debits.all())
-        c = sum((r[0] or 0) for r in credits.all())
+    for account in accounts_list:
+        d, c = balance_map.get(account.id, (0.0, 0.0))
         net = account.opening_balance + (d - c)
         result.append({
             "code": account.code, "name": account.name,
@@ -248,7 +226,6 @@ async def _get_inventory_data(company_id: int, db: AsyncSession):
 
 
 async def _get_payroll_data(company_id: int, db: AsyncSession):
-    from sqlalchemy.orm import joinedload
     result = await db.execute(
         select(PayrollSettlement).options(joinedload(PayrollSettlement.employee)).where(
             PayrollSettlement.company_id == company_id,
@@ -275,25 +252,11 @@ async def _get_tax_data(company_id: int, start_date: date, end_date: date, db: A
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_map = await _get_balance_map(company_id, [a.id for a in accounts_list], db,
+                                          date_field_start=start_date, date_field_end=end_date)
     result = []
-    for account in accounts.scalars().all():
-        debits = await db.execute(
-            select(AccountingEntryDetail.debit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credits = await db.execute(
-            select(AccountingEntryDetail.credit).join(AccountingEntry).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        d = sum((r[0] or 0) for r in debits.all())
-        c = sum((r[0] or 0) for r in credits.all())
+    for account in accounts_list:
+        d, c = balance_map.get(account.id, (0.0, 0.0))
         result.append({"code": account.code, "name": account.name, "debit": d, "credit": c, "balance": c - d})
     return result

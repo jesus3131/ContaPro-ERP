@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/Modal'
 import { InvoiceForm } from '@/components/forms/InvoiceForm'
+import { useToast } from '@/components/ui/toast'
 import { Receipt, Plus, Send, CheckCircle, XCircle, RefreshCw, FileText, DollarSign, Clock, Ban } from 'lucide-react'
 
 export default function FacturacionPage() {
+  const { toast } = useToast()
   const [invoices, setInvoices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -33,9 +35,10 @@ export default function FacturacionPage() {
   const handleSendDian = async (id: number) => {
     try {
       await api.invoicing.sendDian(id)
+      toast('Factura enviada a DIAN exitosamente', 'success')
       loadInvoices()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      toast(err.message || 'Error al enviar a DIAN', 'error')
     }
   }
 
@@ -43,9 +46,10 @@ export default function FacturacionPage() {
     if (!confirm('¿Anular esta factura?')) return
     try {
       await api.invoicing.cancel(id)
+      toast('Factura anulada exitosamente', 'success')
       loadInvoices()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      toast(err.message || 'Error al anular factura', 'error')
     }
   }
 
@@ -193,7 +197,7 @@ export default function FacturacionPage() {
       </Card>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nueva Factura Electrónica" size="xl">
-        <InvoiceForm onSuccess={() => { setModalOpen(false); loadInvoices() }} onCancel={() => setModalOpen(false)} />
+        <InvoiceForm onSuccess={() => { setModalOpen(false); loadInvoices(); toast('Factura creada exitosamente', 'success') }} onCancel={() => setModalOpen(false)} />
       </Modal>
     </div>
   )

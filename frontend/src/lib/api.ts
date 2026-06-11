@@ -1,14 +1,44 @@
 {/* Archivo: api.ts
    Propósito: Cliente API centralizado — todas las llamadas a endpoints del backend, manejo de autenticación y tokens */}
 const API_URL = '/api'
+let isRedirecting = false
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean
 }
 
+function decodeToken(token: string): Record<string, any> | null {
+  try {
+    const payload = token.split('.')[1]
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4)
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
+function isTokenExpired(token: string): boolean {
+  const payload = decodeToken(token)
+  if (!payload || !payload.exp) return true
+  return payload.exp * 1000 < Date.now()
+}
+
+function removeAuthData(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token')
+    localStorage.removeItem('companyId')
+  }
+}
+
 async function getToken(): Promise<string | null> {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('token')
+    const token = localStorage.getItem('token')
+    if (token && isTokenExpired(token)) {
+      removeAuthData()
+      return null
+    }
+    return token
   }
   return null
 }
@@ -44,10 +74,11 @@ export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}):
   })
 
   if (!response.ok) {
-    if (response.status === 401 && !skipAuth) {
-      localStorage.removeItem('token')
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
+    if (response.status === 401 && !skipAuth && !isRedirecting) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+      if (token && isTokenExpired(token)) {
+        isRedirecting = true
+        removeAuthData()
       }
     }
     const error = await response.json().catch(() => ({ detail: response.statusText }))
@@ -89,8 +120,11 @@ export const api = {
     me: () => apiFetch<any>('/auth/me'),
     companies: () => apiFetch<any[]>('/auth/companies'),
     selectCompany: (companyId: number) => {
-      localStorage.setItem('companyId', String(companyId))
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('companyId', String(companyId))
+      }
     },
+    logout: () => removeAuthData(),
   },
   accounting: {
     getPuc: () => apiFetch<any[]>('/accounting/puc'),
@@ -187,11 +221,27 @@ export const api = {
       apiFetch<any>(`/clients/employees/${id}`, { method: 'DELETE' }),
   },
   reports: {
-    download: (reportId: string, format: string, startDate: string, endDate: string) =>
-      apiDownloadBlob(
-        `/reports/${reportId}?start_date=${startDate}&end_date=${endDate}&format=${format}`,
-        `${reportId}.${format}`
-      ),
+    _params: (reportId: string, startDate?: string, endDate?: string): string => {
+      const needsDates = ['balance-sheet', 'income-statement', 'cash-flow', 'trial-balance', 'tax-report']
+      const needsBoth = ['income-statement', 'cash-flow', 'tax-report']
+      const p: string[] = []
+      if (needsDates.includes(reportId)) {
+        if (needsBoth.includes(reportId) && startDate) p.push(`start_date=${startDate}`)
+        if (endDate) p.push(`end_date=${endDate}`)
+      }
+      return p.length ? `?${p.join('&')}` : ''
+    },
+    download: (reportId: string, format: string, startDate?: string, endDate?: string) => {
+      const qs = api.reports._params(reportId, startDate, endDate)
+      const base = `/reports/${reportId}${qs}${qs ? '&' : '?'}format=${format}`
+      return format === 'json'
+        ? apiFetch<any[]>(base)
+        : apiDownloadBlob(base, `${reportId}.${format}`)
+    },
+    data: (reportId: string, startDate?: string, endDate?: string) => {
+      const qs = api.reports._params(reportId, startDate, endDate)
+      return apiFetch<any[]>(`/reports/${reportId}${qs}${qs ? '&' : '?'}format=json`)
+    },
   },
   ai: {
     analyze: (year: number, month: number) =>

@@ -1,9 +1,11 @@
 # Módulo: report_generator.py
 # Propósito: Generador de reportes: PDF y Excel para todos los módulos
 from fastapi.responses import Response
+from fastapi.encoders import jsonable_encoder
 from io import BytesIO
 from datetime import datetime
 import pandas as pd
+import json
 
 
 class ReportGenerator:
@@ -18,6 +20,8 @@ class ReportGenerator:
             return await self._generate_excel(report_type, data)
         elif format == "csv":
             return await self._generate_csv(report_type, data)
+        elif format == "json":
+            return await self._generate_json(report_type, data)
         else:
             return await self._generate_pdf(report_type, data)
 
@@ -64,6 +68,13 @@ class ReportGenerator:
             )
         except Exception as e:
             return Response(content=f"Error generating CSV: {str(e)}", status_code=500)
+
+    async def _generate_json(self, report_type: str, data: list):
+        return Response(
+            content=json.dumps(jsonable_encoder(data), ensure_ascii=False),
+            media_type="application/json",
+            headers={"Content-Disposition": f"inline; filename={report_type}.json"},
+        )
 
     def _build_html(self, report_type: str, data: list) -> str:
         titles = {

@@ -25,8 +25,9 @@ export default function LoginPage() {
     setError('')
     try {
       const res = await api.auth.login({ username, password })
+      localStorage.removeItem('companyId')
       localStorage.setItem('token', res.access_token)
-      router.push('/')
+      router.push('/select-company')
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {
@@ -45,8 +46,9 @@ export default function LoginPage() {
         full_name: fullName,
         password,
       })
+      localStorage.removeItem('companyId')
       localStorage.setItem('token', res.access_token)
-      router.push('/')
+      router.push('/select-company')
     } catch (err: any) {
       setError(err.message || 'Error al registrarse')
     } finally {

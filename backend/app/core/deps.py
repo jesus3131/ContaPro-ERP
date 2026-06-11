@@ -1,6 +1,7 @@
 # deps.py
 # Propósito: Dependencias FastAPI: obtener usuario actual, verificar permisos
 
+from typing import Optional
 from fastapi import Depends, HTTPException, status, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +33,11 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
     request.state.user_id = str(user.id)
-    await db.execute(text(f"SET app.current_user_id = '{user.id}'"))
+    # set_config is PostgreSQL-only, skip for SQLite
+    try:
+        await db.execute(text("SELECT set_config('app.current_user_id', :uid, true)"), {"uid": str(user.id)})
+    except Exception:
+        pass  # set_config not supported on SQLite
     return user
 
 
@@ -54,5 +59,8 @@ async def get_current_company(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active company found")
 
     request.state.company_id = str(company.id)
-    await db.execute(text(f"SET app.current_company_id = '{company.id}'"))
+    try:
+        await db.execute(text("SELECT set_config('app.current_company_id', :cid, true)"), {"cid": str(company.id)})
+    except Exception:
+        pass  # set_config not supported on SQLite
     return company

@@ -15,6 +15,7 @@ app = FastAPI(
     description="ERP Contable y Administrativo para Colombia",
     docs_url="/docs",
     redoc_url="/redoc",
+    redirect_slashes=False,
 )
 
 app.add_middleware(
@@ -39,8 +40,24 @@ app.include_router(dashboard.router, prefix=f"{settings.API_STR}/dashboard", tag
 
 @app.on_event("startup")
 async def startup():
-    await init_db()
-    await seed_default_admin()
+    try:
+        import asyncio
+        # Add timeout to prevent hanging
+        await asyncio.wait_for(init_db(), timeout=30.0)
+        print("✓ Database initialized successfully")
+    except asyncio.TimeoutError:
+        print("⚠ Database initialization timed out - proceeding anyway")
+    except Exception as e:
+        print(f"⚠ Database initialization failed: {e} - proceeding anyway")
+    
+    try:
+        import asyncio
+        await asyncio.wait_for(seed_default_admin(), timeout=10.0)
+        print("✓ Seed data created successfully")
+    except asyncio.TimeoutError:
+        print("⚠ Seed operation timed out - proceeding anyway")
+    except Exception as e:
+        print(f"⚠ Seed operation failed: {e} - proceeding anyway")
 
 
 @app.get("/health")

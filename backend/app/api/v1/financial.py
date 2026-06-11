@@ -3,7 +3,7 @@
 # Funcionalidades principales: Cálculo de liquidez, endeudamiento y rentabilidad; consulta de flujo de caja por período y visualización de presupuestos.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select
 from typing import Optional
 from datetime import date
 
@@ -23,25 +23,47 @@ async def get_financial_indicators(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
 ):
-    end_date = date(year, month or 12, month and 28 or 31)
+    import calendar
+    end_date = date(year, month or 12, month and calendar.monthrange(year, month)[1] or 31)
 
-    active = await db.execute(
-        select(Account).where(Account.company_id == company.id, Account.account_type == AccountType.ACTIVO)
-    )
-    pasivo = await db.execute(
-        select(Account).where(Account.company_id == company.id, Account.account_type == AccountType.PASIVO)
-    )
-    patrimonio = await db.execute(
-        select(Account).where(Account.company_id == company.id, Account.account_type == AccountType.PATRIMONIO)
-    )
-    ingresos = await db.execute(
-        select(Account).where(Account.company_id == company.id, Account.account_type == AccountType.INGRESO)
-    )
+    async def get_balance_by_type(account_type: AccountType) -> float:
+        # Get all account IDs for this type and company
+        acct_ids_r = await db.execute(
+            select(Account.id).where(
+                Account.company_id == company.id,
+                Account.account_type == account_type,
+            )
+        )
+        acct_ids = [r[0] for r in acct_ids_r.all()]
+        if not acct_ids:
+            return 0.0
 
-    total_assets = sum((a.current_balance for a in active.scalars().all()), 0)
-    total_liabilities = sum((a.current_balance for a in pasivo.scalars().all()), 0)
-    total_equity = sum((a.current_balance for a in patrimonio.scalars().all()), 0)
-    total_income = sum((a.current_balance for a in ingresos.scalars().all()), 0)
+        # Get all entry details for these accounts
+        details_r = await db.execute(
+            select(
+                AccountingEntryDetail.account_id,
+                AccountingEntryDetail.debit,
+                AccountingEntryDetail.credit,
+            )
+            .join(AccountingEntry)
+            .where(
+                AccountingEntryDetail.account_id.in_(acct_ids),
+                AccountingEntry.date <= end_date,
+                AccountingEntry.is_reversed == False,
+            )
+        )
+
+        # Compute balance on Python side
+        total = 0.0
+        for det in details_r.all():
+            _, debit, credit = det
+            total += float(debit or 0) - float(credit or 0)
+        return total
+
+    total_assets = await get_balance_by_type(AccountType.ACTIVO)
+    total_liabilities = await get_balance_by_type(AccountType.PASIVO)
+    total_equity = await get_balance_by_type(AccountType.PATRIMONIO)
+    total_income = await get_balance_by_type(AccountType.INGRESO)
 
     liquidity = round(total_assets / total_liabilities, 2) if total_liabilities else 0
     debt_ratio = round((total_liabilities / total_assets) * 100, 2) if total_assets else 0

@@ -43,14 +43,21 @@ class ProductUpdate(BaseModel):
 class ProductResponse(BaseModel):
     id: int
     code: str
+    barcode: Optional[str] = None
     name: str
-    category: Optional[str]
-    cost_price: float
-    sale_price: float
-    current_stock: float
-    min_stock: float
-    is_active: bool
+    description: Optional[str] = None
+    category: Optional[str] = None
+    unit_type: Optional[str] = None
+    cost_price: float = 0.0
+    sale_price: float = 0.0
+    tax_rate: float = 0.0
+    tax_code: Optional[str] = None
+    min_stock: float = 0.0
+    current_stock: float = 0.0
+    costing_method: str = "Promedio"
+    location: Optional[str] = None
     image_url: Optional[str] = None
+    is_active: bool = True
 
     class Config:
         from_attributes = True

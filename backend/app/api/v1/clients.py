@@ -15,6 +15,7 @@ router = APIRouter()
 # ── Client endpoints ──────────────────────────────────────────
 
 @router.post("/", response_model=ClientResponse)
+@router.post("", response_model=ClientResponse)
 async def create_client(
     request: ClientCreate,
     company: Company = Depends(get_current_company),
@@ -28,6 +29,7 @@ async def create_client(
 
 
 @router.get("/", response_model=list[ClientResponse])
+@router.get("", response_model=list[ClientResponse])
 async def list_clients(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Client).where(Client.company_id == company.id).order_by(Client.business_name)

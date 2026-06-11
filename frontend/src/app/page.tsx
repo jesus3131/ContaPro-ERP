@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { DashboardChart } from '@/components/charts/DashboardChart'
+import { useToast } from '@/components/ui/toast'
 import {
   DollarSign, TrendingUp, TrendingDown, Users, FileText,
   Package, Wallet, BarChart3, Activity, RefreshCw,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'
 
 export default function DashboardPage() {
+  const { toast } = useToast()
   const [data, setData] = useState<any>(null)
   const [evolution, setEvolution] = useState<any[]>([])
   const [receivable, setReceivable] = useState<any>(null)
@@ -32,7 +34,7 @@ export default function DashboardPage() {
       setEvolution(monthly)
       setReceivable(ar)
     } catch (err) {
-      console.error('Error loading dashboard:', err)
+      toast('Error al cargar datos del dashboard', 'error')
     } finally {
       setLoading(false)
     }

@@ -29,7 +29,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://contapro:contapro123@postgres:5432/contapro_erp
+      DATABASE_URL: postgresql+psycopg://contapro:contapro123@postgres:5432/contapro_erp
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:80"]'
       SECRET_KEY: "cambio-en-produccion"

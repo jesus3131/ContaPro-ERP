@@ -134,7 +134,7 @@ async def create_entry(
         )
         account = account_result.scalars().first()
         if account:
-            if detail.nature == "Debito":
+            if account.nature == "Deudora":
                 account.current_balance += detail.debit - detail.credit
             else:
                 account.current_balance += detail.credit - detail.debit
@@ -168,6 +168,33 @@ async def list_entries(
     return [AccountingEntryResponse.model_validate(e) for e in result.scalars().all()]
 
 
+async def _get_account_balance_totals(
+    company_id: int,
+    account_ids: list[int],
+    db: AsyncSession,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> dict[int, tuple[float, float]]:
+    query = select(
+        AccountingEntryDetail.account_id,
+        func.coalesce(func.sum(AccountingEntryDetail.debit), 0),
+        func.coalesce(func.sum(AccountingEntryDetail.credit), 0),
+    ).join(AccountingEntry).where(
+        AccountingEntryDetail.account_id.in_(account_ids),
+        AccountingEntry.company_id == company_id,
+        AccountingEntry.is_reversed == False,
+    )
+    if start_date and end_date:
+        query = query.where(AccountingEntry.date.between(start_date, end_date))
+    elif end_date:
+        query = query.where(AccountingEntry.date <= end_date)
+    elif start_date:
+        query = query.where(AccountingEntry.date >= start_date)
+    query = query.group_by(AccountingEntryDetail.account_id)
+    rows = await db.execute(query)
+    return {r[0]: (float(r[1]), float(r[2])) for r in rows.all()}
+
+
 @router.get("/trial-balance", response_model=list[TrialBalanceResponse])
 async def trial_balance(
     end_date: date,
@@ -180,37 +207,17 @@ async def trial_balance(
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_totals = await _get_account_balance_totals(company.id, [a.id for a in accounts_list], db, end_date=end_date)
 
     result = []
-    for account in accounts.scalars().all():
-        debit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company.id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
+    for account in accounts_list:
+        debits, credits = balance_totals.get(account.id, (0.0, 0.0))
+        current_balance = (
+            account.opening_balance + debits - credits
+            if account.account_type in [AccountType.ACTIVO, AccountType.GASTO, AccountType.COSTO]
+            else account.opening_balance + credits - debits
         )
-        credit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company.id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-
-        debits = float(debit_total.scalar() or 0)
-        credits = float(credit_total.scalar() or 0)
-
-        if account.account_type in [AccountType.ACTIVO, AccountType.GASTO, AccountType.COSTO]:
-            current_balance = account.opening_balance + debits - credits
-        else:
-            current_balance = account.opening_balance + credits - debits
 
         if account.accepts_movements or abs(current_balance) > 0.01:
             result.append(TrialBalanceResponse(
@@ -250,37 +257,19 @@ async def income_statement(
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_totals = await _get_account_balance_totals(
+        company.id,
+        [a.id for a in accounts_list],
+        db,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
     result = []
-    for account in accounts.scalars().all():
-        debit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company.id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company.id,
-                AccountingEntry.date.between(start_date, end_date),
-                AccountingEntry.is_reversed == False,
-            )
-        )
-
-        debits = float(debit_total.scalar() or 0)
-        credits = float(credit_total.scalar() or 0)
-
-        if account.account_type in [AccountType.INGRESO]:
-            balance = credits - debits
-        else:
-            balance = debits - credits
+    for account in accounts_list:
+        debits, credits = balance_totals.get(account.id, (0.0, 0.0))
+        balance = credits - debits if account.account_type == AccountType.INGRESO else debits - credits
 
         if abs(balance) > 0.01:
             result.append(FinancialStatementResponse(
@@ -301,37 +290,13 @@ async def _get_financial_statement(company_id: int, end_date: date, db: AsyncSes
             Account.is_active == True,
         ).order_by(Account.code)
     )
+    accounts_list = accounts.scalars().all()
+    balance_totals = await _get_account_balance_totals(company_id, [a.id for a in accounts_list], db, end_date=end_date)
 
     result = []
-    for account in accounts.scalars().all():
-        debit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.debit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        credit_total = await db.execute(
-            select(func.coalesce(func.sum(AccountingEntryDetail.credit), 0)).join(
-                AccountingEntry
-            ).where(
-                AccountingEntryDetail.account_id == account.id,
-                AccountingEntry.company_id == company_id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-
-        debits = float(debit_total.scalar() or 0)
-        credits = float(credit_total.scalar() or 0)
-
-        if account.account_type == AccountType.ACTIVO:
-            balance = account.opening_balance + debits - credits
-        else:
-            balance = account.opening_balance + credits - debits
+    for account in accounts_list:
+        debits, credits = balance_totals.get(account.id, (0.0, 0.0))
+        balance = account.opening_balance + debits - credits if account.account_type == AccountType.ACTIVO else account.opening_balance + credits - debits
 
         result.append(FinancialStatementResponse(
             account_code=account.code,

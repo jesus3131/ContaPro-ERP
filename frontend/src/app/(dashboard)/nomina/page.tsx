@@ -7,9 +7,11 @@ import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { Wallet, Calendar, Users, Calculator, DollarSign, TrendingUp, Clock, Briefcase } from 'lucide-react'
 
 export default function NominaPage() {
+  const { toast } = useToast()
   const [periodId, setPeriodId] = useState<number | null>(null)
   const [settlements, setSettlements] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -20,8 +22,9 @@ export default function NominaPage() {
       const now = new Date()
       const res = await api.payroll.createPeriod(now.getFullYear(), now.getMonth() + 1)
       setPeriodId(res.id)
-    } catch (err) {
-      console.error(err)
+      toast('Período de nómina creado exitosamente', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Error al crear período', 'error')
     } finally {
       setLoading(false)
     }
@@ -34,8 +37,9 @@ export default function NominaPage() {
       await api.payroll.settle(periodId)
       const s = await api.payroll.getSettlements(periodId)
       setSettlements(s)
-    } catch (err) {
-      console.error(err)
+      toast('Nómina liquidada exitosamente', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Error al liquidar nómina', 'error')
     } finally {
       setLoading(false)
     }

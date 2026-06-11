@@ -19,14 +19,27 @@ async def get_db(request: Request = None) -> AsyncSession:
     async with async_session() as session:
         try:
             if request and hasattr(request.state, "user_id") and request.state.user_id:
-                await session.execute(
-                    text(f"SET app.current_user_id = '{request.state.user_id}'")
-                )
+                # SQLite does not support PostgreSQL's set_config.
+                # We only set a contextual value when using a Postgres DB.
+                if settings.async_database_url.startswith("postgres"):
+                    await session.execute(
+                        text("SELECT set_config('app.current_user_id', :uid, true)"),
+                        {"uid": request.state.user_id},
+                    )
+                else:
+                    # No-op for SQLite (and other engines) to avoid runtime failures.
+                    pass
             yield session
         finally:
             await session.close()
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Initialize database tables using async connection"""
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✓ Database tables created/verified")
+    except Exception as e:
+        print(f"✗ Error initializing database: {e}")
+        raise

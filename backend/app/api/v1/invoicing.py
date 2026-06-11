@@ -4,6 +4,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from typing import Optional
 from app.db.database import get_db
 from app.core.deps import get_current_user, get_current_company
@@ -103,25 +104,34 @@ async def create_invoice(
 @router.get("/invoices", response_model=list[InvoiceResponse])
 async def list_invoices(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Invoice).where(Invoice.company_id == company.id).order_by(Invoice.created_at.desc()).limit(100)
+        select(Invoice).options(selectinload(Invoice.client)).where(Invoice.company_id == company.id).order_by(Invoice.created_at.desc()).limit(100)
     )
     invoices = result.scalars().all()
     response = []
     for inv in invoices:
-        client = await db.get(Client, inv.client_id)
+        client = inv.client
         response.append(InvoiceResponse(
             id=inv.id,
             invoice_number=inv.invoice_number,
             prefix=inv.prefix,
             issue_date=inv.issue_date,
             due_date=inv.due_date,
-            client_name=client.business_name or f"{client.first_name} {client.last_name}" if client else "N/A",
+            client_id=inv.client_id,
+            client_name=f"{client.business_name or f'{client.first_name} {client.last_name}'}" if client else "N/A",
+            invoice_type=inv.invoice_type,
+            payment_method=inv.payment_method,
+            payment_form=inv.payment_form,
+            currency=inv.currency or "COP",
             subtotal=inv.subtotal,
+            discount=inv.discount,
             tax_amount=inv.tax_amount,
             total=inv.total,
+            retention_amount=inv.retention_amount,
             status=inv.status,
             dian_status=inv.dian_status,
             cufe=inv.cufe,
+            notes=inv.notes,
+            created_by=inv.created_by,
         ))
     return response
 

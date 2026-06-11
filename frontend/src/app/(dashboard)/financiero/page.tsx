@@ -8,15 +8,19 @@ import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { DashboardChart } from '@/components/charts/DashboardChart'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { BarChart3, TrendingUp, DollarSign, RefreshCw, PieChart, Shield, Activity } from 'lucide-react'
 
 export default function FinancieroPage() {
+  const { toast } = useToast()
   const [indicators, setIndicators] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    api.financial.indicators(new Date().getFullYear()).then(setIndicators).catch(console.error).finally(() => setLoading(false))
+    api.financial.indicators(new Date().getFullYear()).then(setIndicators).catch((err) => {
+      toast(err.message || 'Error al cargar indicadores financieros', 'error')
+    }).finally(() => setLoading(false))
   }, [])
 
   const indicatorCards = [

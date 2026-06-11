@@ -4,6 +4,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+import calendar
 from datetime import date, datetime
 from app.db.database import get_db
 from app.core.deps import get_current_company
@@ -22,17 +23,13 @@ async def dashboard_summary(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
 ):
-    end_date = date(year, min(month, 12), 28)
-
-    accounts = await db.execute(
-        select(Account).where(Account.company_id == company.id)
-    )
-    total_assets = sum(a.current_balance for a in accounts.scalars().all() if a.account_type == AccountType.ACTIVO)
+    end_date = date(year, min(month, 12), calendar.monthrange(year, min(month, 12))[1])
 
     accounts = await db.execute(
         select(Account).where(Account.company_id == company.id)
     )
     accounts_list = accounts.scalars().all()
+    total_assets = sum(a.current_balance for a in accounts_list if a.account_type == AccountType.ACTIVO)
     total_liabilities = sum(a.current_balance for a in accounts_list if a.account_type == AccountType.PASIVO)
     total_equity = sum(a.current_balance for a in accounts_list if a.account_type == AccountType.PATRIMONIO)
     total_income = sum(a.current_balance for a in accounts_list if a.account_type == AccountType.INGRESO)
@@ -77,25 +74,34 @@ async def monthly_evolution(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
 ):
+    start_of_year = date(year, 1, 1)
+    end_of_year = date(year, 12, 31)
+
+    entries = await db.execute(
+        select(
+            func.extract('month', AccountingEntry.date).label('month'),
+            func.coalesce(func.sum(AccountingEntryDetail.debit), 0),
+            func.coalesce(func.sum(AccountingEntryDetail.credit), 0),
+        ).join(AccountingEntry).where(
+            AccountingEntry.company_id == company.id,
+            AccountingEntry.date.between(start_of_year, end_of_year),
+            AccountingEntry.is_reversed == False,
+        ).group_by(func.extract('month', AccountingEntry.date))
+    )
+
+    totals_by_month = {
+        int(row[0]): (float(row[1]), float(row[2]))
+        for row in entries.all()
+    }
+
     months_data = []
     for m in range(1, 13):
-        end_date = date(year, m, 28)
-
-        entries = await db.execute(
-            select(AccountingEntryDetail, AccountingEntry).join(AccountingEntry).where(
-                AccountingEntry.company_id == company.id,
-                AccountingEntry.date <= end_date,
-                AccountingEntry.is_reversed == False,
-            )
-        )
-        total_debits = sum(d.debit for d, e in entries.all())
-        total_credits = sum(d.credit for d, e in entries.all())
-
+        const_debits, const_credits = totals_by_month.get(m, (0.0, 0.0))
         months_data.append({
             "month": m,
-            "total_debits": total_debits,
-            "total_credits": total_credits,
-            "balance": total_credits - total_debits,
+            "total_debits": const_debits,
+            "total_credits": const_credits,
+            "balance": const_credits - const_debits,
         })
 
     return months_data
@@ -106,9 +112,14 @@ async def accounts_receivable(company: Company = Depends(get_current_company), d
     result = await db.execute(
         select(Invoice).where(
             Invoice.company_id == company.id,
-            Invoice.status.in_(["Draft", "Sent"]),
+            Invoice.status == "Sent",
         ).order_by(Invoice.due_date)
     )
     invoices = result.scalars().all()
-    total_due = sum(i.total for i in invoices if i.status in ["Draft", "Sent"])
-    return {"total_receivable": total_due, "invoice_count": len(invoices)}
+    total_due = sum(i.total for i in invoices)
+    overdue_count = sum(1 for i in invoices if i.due_date and i.due_date < date.today())
+    return {
+        "total_receivable": total_due,
+        "invoice_count": len(invoices),
+        "overdue_count": overdue_count,
+    }

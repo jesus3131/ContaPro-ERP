@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/Modal'
 import { EntryForm } from '@/components/forms/EntryForm'
+import { useToast } from '@/components/ui/toast'
 import { BookOpen, Plus, RefreshCw, FileText, DollarSign, Layers, TrendingUp } from 'lucide-react'
 
 export default function ContabilidadPage() {
+  const { toast } = useToast()
   const [accounts, setAccounts] = useState<any[]>([])
   const [entries, setEntries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,12 +37,19 @@ export default function ContabilidadPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  const handleEntrySuccess = () => {
+    setModalOpen(false)
+    toast('Comprobante contable creado exitosamente', 'success')
+    loadData()
+  }
+
   const handleSeedPuc = async () => {
     try {
       await api.accounting.seedPuc()
+      toast('PUC cargado exitosamente', 'success')
       loadData()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      toast(err.message || 'Error al cargar PUC', 'error')
     }
   }
 
@@ -178,8 +187,8 @@ export default function ContabilidadPage() {
         </Card>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo Comprobante Contable" size="xl">
-        <EntryForm onSuccess={() => { setModalOpen(false); loadData() }} onCancel={() => setModalOpen(false)} />
+        <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nuevo Comprobante Contable" size="xl">
+        <EntryForm onSuccess={handleEntrySuccess} onCancel={() => setModalOpen(false)} />
       </Modal>
     </div>
   )

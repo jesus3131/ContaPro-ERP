@@ -24,7 +24,17 @@ def decode_access_token(token: str) -> Optional[dict[str, Any]]:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    # Handle demo password format for development
+    if hashed_password.startswith("demo_"):
+        import hashlib
+        demo_hash = f"demo_{hashlib.sha256(plain_password.encode()).hexdigest()}"
+        return demo_hash == hashed_password
+    
+    # Normal bcrypt verification
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:

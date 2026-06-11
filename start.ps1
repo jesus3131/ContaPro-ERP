@@ -1,7 +1,8 @@
 param(
     [switch]$Build,
     [switch]$Test,
-    [switch]$Docker
+    [switch]$Docker,
+    [switch]$SQLite
 )
 
 Write-Host "=========================================" -ForegroundColor Cyan
@@ -49,12 +50,17 @@ $python = Join-Path $venvDir "Scripts\python.exe"
 Write-Host "  Instalando dependencias del backend..." -ForegroundColor Gray
 & $pip install -r (Join-Path $backendDir "requirements.txt") -q
 
+if ($SQLite) {
+    $env:USE_SQLITE = "true"
+    Write-Host "  Usando SQLite (modo desarrollo)" -ForegroundColor Magenta
+}
 Write-Host "  Iniciando backend en http://localhost:8000" -ForegroundColor Green
 $backendJob = Start-Job -ScriptBlock {
-    param($python, $dir)
+    param($python, $dir, $useSqlite)
+    if ($useSqlite) { $env:USE_SQLITE = "true" }
     Set-Location $dir
-    & $python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-} -ArgumentList $python, $backendDir
+    & $python run.py
+} -ArgumentList $python, $backendDir, $SQLite
 
 # Esperar a que el backend esté listo
 Write-Host "  Esperando al backend..." -ForegroundColor Gray

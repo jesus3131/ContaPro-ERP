@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/Modal'
 import { ProductForm } from '@/components/forms/ProductForm'
+import { useToast } from '@/components/ui/toast'
 import { Package, AlertTriangle, Plus, RefreshCw, Pencil, Trash2, DollarSign, Layers, Search } from 'lucide-react'
 
 export default function InventarioPage() {
+  const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
   const [alerts, setAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,6 +43,7 @@ export default function InventarioPage() {
   const handleSave = () => {
     setModalOpen(false)
     setEditingProduct(null)
+    toast(editingProduct ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente', 'success')
     loadData()
   }
 
@@ -57,10 +60,11 @@ export default function InventarioPage() {
   const handleDelete = async (id: number) => {
     try {
       await api.inventory.deleteProduct(id)
+      toast('Producto eliminado exitosamente', 'success')
       setDeleteConfirm(null)
       loadData()
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      toast(err.message || 'Error al eliminar producto', 'error')
     }
   }
 

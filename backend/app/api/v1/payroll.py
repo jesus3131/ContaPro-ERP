@@ -11,6 +11,7 @@ from app.models.user import User, Company
 from app.models.payroll import PayrollPeriod, PayrollSettlement
 from app.models.clients import Employee
 from app.services.payroll_calculator import PayrollCalculator
+from sqlalchemy.orm import joinedload
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ async def list_periods(
             "period": f"{p.year}-{p.month:02d}",
             "start_date": p.start_date.isoformat(),
             "end_date": p.end_date.isoformat(),
-            "payment_date": p.payment_date.isoformat(),
+            "payment_date": p.payment_date.isoformat() if p.payment_date else None,
             "is_closed": p.is_closed,
         }
         for p in periods
@@ -65,7 +66,7 @@ async def create_period(
         period_type=period_type,
         start_date=date(year, month, 1),
         end_date=date(year, month, last_day),
-        payment_date=date(year, month, min(last_day, 28)),
+        payment_date=date(year, month, last_day),
     )
     db.add(period)
     await db.commit()
@@ -114,7 +115,7 @@ async def list_settlements(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(PayrollSettlement).where(
+        select(PayrollSettlement).options(joinedload(PayrollSettlement.employee)).where(
             PayrollSettlement.company_id == company.id,
             PayrollSettlement.period_id == period_id,
         )
@@ -122,7 +123,7 @@ async def list_settlements(
     settlements = result.scalars().all()
     response = []
     for s in settlements:
-        emp = await db.get(Employee, s.employee_id)
+        emp = s.employee
         response.append({
             "id": s.id,
             "employee": f"{emp.first_name} {emp.last_name}" if emp else "N/A",

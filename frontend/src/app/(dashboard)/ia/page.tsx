@@ -6,9 +6,11 @@ import { useState } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { Brain, Search, AlertTriangle, TrendingUp, FileText, Sparkles, MessageSquare, Lightbulb, RefreshCw } from 'lucide-react'
 
 export default function IAPage() {
+  const { toast } = useToast()
   const [analysis, setAnalysis] = useState<string>('')
   const [errors, setErrors] = useState<any>(null)
   const [prediction, setPrediction] = useState<string>('')
@@ -21,8 +23,10 @@ export default function IAPage() {
       const now = new Date()
       const res = await api.ai.analyze(now.getFullYear(), now.getMonth() + 1)
       setAnalysis(res.analysis || 'No se pudo generar el análisis')
+      toast('Análisis financiero completado', 'success')
     } catch (err) {
       setAnalysis('Error al conectar con el asistente IA')
+      toast('Error al conectar con el asistente IA', 'error')
     } finally {
       setLoading(null)
     }
@@ -33,8 +37,10 @@ export default function IAPage() {
     try {
       const res = await api.ai.detectErrors()
       setErrors(res)
+      toast(`Revisión completada: ${res?.errors_detected || 0} errores encontrados`, res?.errors_detected > 0 ? 'warning' : 'success')
     } catch (err) {
       setErrors({ error: 'Error al detectar errores' })
+      toast('Error al detectar errores contables', 'error')
     } finally {
       setLoading(null)
     }
@@ -45,8 +51,10 @@ export default function IAPage() {
     try {
       const res = await api.ai.predictCashFlow()
       setPrediction(res.prediction || 'No se pudo generar la predicción')
+      toast('Predicción de flujo de caja generada', 'success')
     } catch (err) {
       setPrediction('Error al generar predicción')
+      toast('Error al generar predicción', 'error')
     } finally {
       setLoading(null)
     }
@@ -57,8 +65,10 @@ export default function IAPage() {
     try {
       const res = await api.ai.generateReport('executive')
       setReport(res.report || 'No se pudo generar el reporte')
+      toast('Reporte ejecutivo generado exitosamente', 'success')
     } catch (err) {
       setReport('Error al generar reporte')
+      toast('Error al generar reporte ejecutivo', 'error')
     } finally {
       setLoading(null)
     }
