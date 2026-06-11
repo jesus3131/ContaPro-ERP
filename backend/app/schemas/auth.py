@@ -14,6 +14,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: "UserResponse"
+    company_id: Optional[int] = None
 
 
 class UserCreate(BaseModel):
@@ -34,6 +35,15 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RegisterWithCompanyRequest(UserCreate):
+    company_name: str = Field(..., min_length=2, max_length=255)
+    company_nit: str = Field(..., min_length=5, max_length=20)
+    company_business_name: Optional[str] = None
+    company_address: Optional[str] = None
+    company_city: Optional[str] = None
+    company_phone: Optional[str] = None
 
 
 class CompanyCreate(BaseModel):

@@ -14,10 +14,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [companyNit, setCompanyNit] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  const goToDashboard = (companyId?: number) => {
+    if (companyId) {
+      localStorage.setItem('companyId', String(companyId))
+      router.push('/')
+    } else {
+      router.push('/select-company')
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,7 +38,7 @@ export default function LoginPage() {
       const res = await api.auth.login({ username, password })
       localStorage.removeItem('companyId')
       localStorage.setItem('token', res.access_token)
-      router.push('/select-company')
+      goToDashboard(res.company_id)
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {
@@ -40,15 +51,17 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await api.auth.register({
+      const res = await api.auth.registerWithCompany({
         username,
         email,
         full_name: fullName,
         password,
+        company_name: companyName,
+        company_nit: companyNit,
       })
       localStorage.removeItem('companyId')
       localStorage.setItem('token', res.access_token)
-      router.push('/select-company')
+      goToDashboard(res.company_id)
     } catch (err: any) {
       setError(err.message || 'Error al registrarse')
     } finally {
@@ -185,6 +198,37 @@ export default function LoginPage() {
                   required
                 />
               </div>
+            )}
+
+            {tab === 'register' && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Nombre de la Empresa
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="input-premium"
+                    placeholder="Mi Empresa S.A.S."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    NIT de la Empresa
+                  </label>
+                  <input
+                    type="text"
+                    value={companyNit}
+                    onChange={(e) => setCompanyNit(e.target.value)}
+                    className="input-premium"
+                    placeholder="900123456-7"
+                    required
+                  />
+                </div>
+              </>
             )}
 
             <div>

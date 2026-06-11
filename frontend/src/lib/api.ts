@@ -110,11 +110,18 @@ export async function apiDownloadBlob(endpoint: string, filename: string): Promi
 export const api = {
   auth: {
     login: (data: { username: string; password: string }) =>
-      apiFetch<{ access_token: string; token_type: string; user: any }>('/auth/login', {
+      apiFetch<{ access_token: string; token_type: string; user: any; company_id?: number }>('/auth/login', {
         method: 'POST', body: JSON.stringify(data), skipAuth: true,
       }),
     register: (data: { username: string; email: string; full_name: string; password: string }) =>
-      apiFetch<{ access_token: string; token_type: string; user: any }>('/auth/register', {
+      apiFetch<{ access_token: string; token_type: string; user: any; company_id?: number }>('/auth/register', {
+        method: 'POST', body: JSON.stringify(data), skipAuth: true,
+      }),
+    registerWithCompany: (data: {
+      username: string; email: string; full_name: string; password: string;
+      company_name: string; company_nit: string;
+    }) =>
+      apiFetch<{ access_token: string; token_type: string; user: any; company_id?: number }>('/auth/register-with-company', {
         method: 'POST', body: JSON.stringify(data), skipAuth: true,
       }),
     me: () => apiFetch<any>('/auth/me'),
