@@ -49,3 +49,9 @@ htmlcov/
 # Uploads
 uploads/
 media/
+
+# Runtime
+backend/backend.pid
+
+# opencode
+skills-lock.json
