@@ -1,18 +1,19 @@
-# Módulo: clients
-# Propósito: CRUD completo de clientes, proveedores y empleados para el ERP.
-# Funcionalidades principales: Creación, consulta, actualización y eliminación de clientes, proveedores y empleados por empresa.
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from typing import Optional
 from app.db.database import get_db
-from app.core.deps import get_current_company
+from app.core.deps import get_current_company, require_role
 from app.models.user import Company
 from app.models.clients import Client, Supplier, Employee
 from app.schemas.clients import ClientCreate, ClientUpdate, ClientResponse, SupplierCreate, SupplierUpdate, SupplierResponse, EmployeeCreate, EmployeeUpdate, EmployeeResponse
 
 router = APIRouter()
 
-# ── Client endpoints ──────────────────────────────────────────
+_reader = require_role(["admin", "contador", "vendedor", "gerente", "viewer"])
+_writer = require_role(["admin", "contador", "vendedor", "gerente"])
+_editor = require_role(["admin", "contador", "gerente"])
+
 
 @router.post("/", response_model=ClientResponse)
 @router.post("", response_model=ClientResponse)
@@ -20,6 +21,7 @@ async def create_client(
     request: ClientCreate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     client = Client(company_id=company.id, **request.model_dump())
     db.add(client)
@@ -30,19 +32,29 @@ async def create_client(
 
 @router.get("/", response_model=list[ClientResponse])
 @router.get("", response_model=list[ClientResponse])
-async def list_clients(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def list_clients(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Client).where(Client.company_id == company.id).order_by(Client.business_name)
+        select(Client).where(Client.company_id == company.id).order_by(Client.business_name).offset(skip).limit(limit)
     )
     return [ClientResponse.model_validate(c) for c in result.scalars().all()]
 
 
-# ── Supplier endpoints (before param routes to avoid conflicts) ──
-
 @router.get("/suppliers", response_model=list[SupplierResponse])
-async def list_suppliers(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def list_suppliers(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Supplier).where(Supplier.company_id == company.id).order_by(Supplier.business_name)
+        select(Supplier).where(Supplier.company_id == company.id).order_by(Supplier.business_name).offset(skip).limit(limit)
     )
     return [SupplierResponse.model_validate(s) for s in result.scalars().all()]
 
@@ -52,6 +64,7 @@ async def create_supplier(
     request: SupplierCreate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     supplier = Supplier(company_id=company.id, **request.model_dump())
     db.add(supplier)
@@ -61,7 +74,12 @@ async def create_supplier(
 
 
 @router.get("/suppliers/{supplier_id}", response_model=SupplierResponse)
-async def get_supplier(supplier_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_supplier(
+    supplier_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Supplier).where(Supplier.id == supplier_id, Supplier.company_id == company.id)
     )
@@ -77,6 +95,7 @@ async def update_supplier(
     request: SupplierUpdate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_editor),
 ):
     result = await db.execute(
         select(Supplier).where(Supplier.id == supplier_id, Supplier.company_id == company.id)
@@ -96,6 +115,7 @@ async def delete_supplier(
     supplier_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin"])),
 ):
     result = await db.execute(
         select(Supplier).where(Supplier.id == supplier_id, Supplier.company_id == company.id)
@@ -108,12 +128,16 @@ async def delete_supplier(
     return {"message": "Supplier deleted"}
 
 
-# ── Employee endpoints (before param routes to avoid conflicts) ──
-
 @router.get("/employees", response_model=list[EmployeeResponse])
-async def list_employees(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def list_employees(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Employee).where(Employee.company_id == company.id).order_by(Employee.first_name)
+        select(Employee).where(Employee.company_id == company.id).order_by(Employee.first_name).offset(skip).limit(limit)
     )
     return [EmployeeResponse.model_validate(e) for e in result.scalars().all()]
 
@@ -123,6 +147,7 @@ async def create_employee(
     request: EmployeeCreate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     employee = Employee(company_id=company.id, **request.model_dump())
     db.add(employee)
@@ -132,7 +157,12 @@ async def create_employee(
 
 
 @router.get("/employees/{employee_id}", response_model=EmployeeResponse)
-async def get_employee(employee_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_employee(
+    employee_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Employee).where(Employee.id == employee_id, Employee.company_id == company.id)
     )
@@ -148,6 +178,7 @@ async def update_employee(
     request: EmployeeUpdate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_editor),
 ):
     result = await db.execute(
         select(Employee).where(Employee.id == employee_id, Employee.company_id == company.id)
@@ -167,6 +198,7 @@ async def delete_employee(
     employee_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin"])),
 ):
     result = await db.execute(
         select(Employee).where(Employee.id == employee_id, Employee.company_id == company.id)
@@ -179,10 +211,13 @@ async def delete_employee(
     return {"message": "Employee deleted"}
 
 
-# ── Client param routes (must be last) ──
-
 @router.get("/{client_id}", response_model=ClientResponse)
-async def get_client(client_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_client(
+    client_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Client).where(Client.id == client_id, Client.company_id == company.id)
     )
@@ -198,6 +233,7 @@ async def update_client(
     request: ClientUpdate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_editor),
 ):
     result = await db.execute(
         select(Client).where(Client.id == client_id, Client.company_id == company.id)
@@ -218,6 +254,7 @@ async def delete_client(
     client_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin"])),
 ):
     result = await db.execute(
         select(Client).where(Client.id == client_id, Client.company_id == company.id)

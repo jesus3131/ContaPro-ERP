@@ -1,13 +1,10 @@
-# Módulo: invoicing
-# Propósito: Facturación electrónica — creación de facturas, validación DIAN, envío y anulación.
-# Funcionalidades principales: Creación de facturas con cálculo de impuestos, validación contra la DIAN, envío electrónico con CUFE y anulación de facturas.
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from typing import Optional
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company
+from app.core.deps import get_current_user, get_current_company, require_role
 from app.models.user import User, Company
 from app.models.invoicing import Invoice, InvoiceItem, CreditNote, DebitNote
 from app.models.clients import Client
@@ -17,6 +14,9 @@ from app.services.dian import DianService
 
 router = APIRouter()
 
+_reader = require_role(["admin", "contador", "vendedor", "gerente", "viewer"])
+_writer = require_role(["admin", "contador", "vendedor", "gerente"])
+
 
 @router.post("/invoices", response_model=InvoiceResponse)
 async def create_invoice(
@@ -24,6 +24,7 @@ async def create_invoice(
     company: Company = Depends(get_current_company),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     client_result = await db.execute(
         select(Client).where(Client.id == request.client_id, Client.company_id == company.id)
@@ -102,9 +103,15 @@ async def create_invoice(
 
 
 @router.get("/invoices", response_model=list[InvoiceResponse])
-async def list_invoices(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def list_invoices(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Invoice).options(selectinload(Invoice.client)).where(Invoice.company_id == company.id).order_by(Invoice.created_at.desc()).limit(100)
+        select(Invoice).options(selectinload(Invoice.client)).where(Invoice.company_id == company.id).order_by(Invoice.created_at.desc()).offset(skip).limit(limit)
     )
     invoices = result.scalars().all()
     response = []
@@ -141,6 +148,7 @@ async def validate_with_dian(
     invoice_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin", "contador", "gerente"])),
 ):
     result = await db.execute(
         select(Invoice).where(Invoice.id == invoice_id, Invoice.company_id == company.id)
@@ -167,6 +175,7 @@ async def send_to_dian(
     invoice_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin", "contador", "gerente"])),
 ):
     result = await db.execute(
         select(Invoice).where(Invoice.id == invoice_id, Invoice.company_id == company.id)
@@ -191,6 +200,7 @@ async def cancel_invoice(
     invoice_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin", "contador", "gerente"])),
 ):
     result = await db.execute(
         select(Invoice).where(Invoice.id == invoice_id, Invoice.company_id == company.id)

@@ -1,6 +1,3 @@
-# Módulo: financial
-# Propósito: Indicadores financieros, flujo de caja y presupuestos para análisis económico de la empresa.
-# Funcionalidades principales: Cálculo de liquidez, endeudamiento y rentabilidad; consulta de flujo de caja por período y visualización de presupuestos.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,12 +5,14 @@ from typing import Optional
 from datetime import date
 
 from app.db.database import get_db
-from app.core.deps import get_current_company
+from app.core.deps import get_current_company, require_role
 from app.models.user import Company
 from app.models.accounting import Account, AccountingEntryDetail, AccountingEntry, AccountType
 from app.models.financial import FinancialIndicator, CashFlowProjection, Budget
 
 router = APIRouter()
+
+_reader = require_role(["admin", "contador", "gerente", "viewer"])
 
 
 @router.get("/indicators")
@@ -22,12 +21,12 @@ async def get_financial_indicators(
     month: Optional[int] = None,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     import calendar
     end_date = date(year, month or 12, month and calendar.monthrange(year, month)[1] or 31)
 
     async def get_balance_by_type(account_type: AccountType) -> float:
-        # Get all account IDs for this type and company
         acct_ids_r = await db.execute(
             select(Account.id).where(
                 Account.company_id == company.id,
@@ -38,7 +37,6 @@ async def get_financial_indicators(
         if not acct_ids:
             return 0.0
 
-        # Get all entry details for these accounts
         details_r = await db.execute(
             select(
                 AccountingEntryDetail.account_id,
@@ -53,7 +51,6 @@ async def get_financial_indicators(
             )
         )
 
-        # Compute balance on Python side
         total = 0.0
         for det in details_r.all():
             _, debit, credit = det
@@ -87,6 +84,7 @@ async def get_cash_flow(
     end_date: date,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     cash_accounts = await db.execute(
         select(Account).where(
@@ -130,6 +128,7 @@ async def get_budgets(
     year: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     budgets = await db.execute(
         select(Budget).where(

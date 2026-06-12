@@ -1,19 +1,18 @@
-# Módulo: dashboard
-# Propósito: Resumen ejecutivo del negocio — indicadores clave, evolución mensual y cuentas por cobrar.
-# Funcionalidades principales: Dashboard con totales de activos/pasivos/patrimonio/ingresos, evolución mensual de movimientos contables y estado de cuentas por cobrar.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 import calendar
 from datetime import date, datetime
 from app.db.database import get_db
-from app.core.deps import get_current_company
+from app.core.deps import get_current_company, require_role
 from app.models.user import Company
 from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType
 from app.models.invoicing import Invoice
 from app.models.clients import Client
 
 router = APIRouter()
+
+_reader = require_role(["admin", "contador", "gerente", "viewer"])
 
 
 @router.get("/summary")
@@ -22,6 +21,7 @@ async def dashboard_summary(
     month: int = Query(default_factory=lambda: datetime.now().month),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     end_date = date(year, min(month, 12), calendar.monthrange(year, min(month, 12))[1])
 
@@ -73,6 +73,7 @@ async def monthly_evolution(
     year: int = Query(default_factory=lambda: datetime.now().year),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     start_of_year = date(year, 1, 1)
     end_of_year = date(year, 12, 31)
@@ -108,7 +109,11 @@ async def monthly_evolution(
 
 
 @router.get("/accounts-receivable")
-async def accounts_receivable(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def accounts_receivable(
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Invoice).where(
             Invoice.company_id == company.id,

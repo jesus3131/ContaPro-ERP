@@ -1,19 +1,18 @@
-# Módulo: ai
-# Propósito: Integración con inteligencia artificial para análisis financiero, detección de errores contables, predicción de flujo de caja y generación de reportes automatizados.
-# Funcionalidades principales: Análisis de estados financieros con IA, detección de anomalías en asientos, predicción de flujo de efectivo y generación de reportes narrativos.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import calendar
 from datetime import date
 from app.db.database import get_db
-from app.core.deps import get_current_company
+from app.core.deps import get_current_company, require_role
 from app.core.config import settings
 from app.models.user import Company
 from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType
 from app.services.ai_assistant import AIAssistant
 
 router = APIRouter()
+
+_writer = require_role(["admin", "gerente"])
 
 
 @router.post("/analyze")
@@ -22,6 +21,7 @@ async def analyze_financials(
     month: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=400, detail="OpenAI API key not configured")
@@ -73,6 +73,7 @@ async def analyze_financials(
 async def detect_accounting_errors(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=400, detail="OpenAI API key not configured")
@@ -111,6 +112,7 @@ async def detect_accounting_errors(
 async def predict_cash_flow(
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=400, detail="OpenAI API key not configured")
@@ -148,6 +150,7 @@ async def generate_ai_report(
     report_type: str,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=400, detail="OpenAI API key not configured")

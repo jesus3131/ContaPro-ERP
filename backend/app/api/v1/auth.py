@@ -1,7 +1,4 @@
-# Módulo: auth
-# Propósito: Gestión de autenticación y registro — login, registro de usuarios y administración de empresas.
-# Funcionalidades principales: Inicio de sesión con JWT, registro de nuevos usuarios, creación y listado de empresas asociadas al usuario.
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.database import get_db
@@ -9,15 +6,19 @@ from app.core.security import create_access_token, get_password_hash, verify_pas
 from app.core.deps import get_current_user
 from app.models.user import User, Company, UserCompany
 from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserResponse, CompanyCreate, CompanyResponse, RegisterWithCompanyRequest
+from app.middleware.rate_limit import check_rate_limit
 
 router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.username == request.username))
+async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    check_rate_limit(ip, "login")
+
+    result = await db.execute(select(User).where(User.username == body.username))
     user = result.scalars().first()
-    if not user or not verify_password(request.password, user.password_hash):
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     companies_result = await db.execute(
@@ -28,7 +29,19 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     companies = companies_result.scalars().all()
     company_id = companies[0].id if len(companies) == 1 else None
 
-    access_token = create_access_token(user.id)
+    # Get role from the first active company association
+    role = None
+    if company_id:
+        uc_result = await db.execute(
+            select(UserCompany).where(
+                UserCompany.user_id == user.id,
+                UserCompany.company_id == company_id,
+            )
+        )
+        uc = uc_result.scalars().first()
+        role = uc.role if uc else "viewer"
+
+    access_token = create_access_token(user.id, company_id=company_id, role=role)
     return TokenResponse(
         access_token=access_token,
         user=UserResponse.model_validate(user),
@@ -93,13 +106,14 @@ async def register_with_company(request: RegisterWithCompanyRequest, db: AsyncSe
     db.add(company)
     await db.flush()
 
-    user_company = UserCompany(user_id=user.id, company_id=company.id, role="admin")
+    role = "admin"
+    user_company = UserCompany(user_id=user.id, company_id=company.id, role=role)
     db.add(user_company)
     await db.commit()
     await db.refresh(user)
     await db.refresh(company)
 
-    access_token = create_access_token(user.id)
+    access_token = create_access_token(user.id, company_id=company.id, role=role)
     return TokenResponse(
         access_token=access_token,
         user=UserResponse.model_validate(user),

@@ -1,6 +1,3 @@
-# Módulo: reports
-# Propósito: Generación de reportes descargables en PDF/Excel — balance general, estados financieros, inventario, nómina e impuestos.
-# Funcionalidades principales: Descarga de balance general, estado de resultados, flujo de caja, balance de prueba, cuentas por cobrar, reporte de inventario, nómina y reporte tributario.
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +7,7 @@ from datetime import date
 from typing import Optional
 from io import BytesIO
 from app.db.database import get_db
-from app.core.deps import get_current_company
+from app.core.deps import get_current_company, require_role
 from app.models.user import Company
 from app.models.accounting import Account, AccountingEntryDetail, AccountingEntry, AccountType
 from app.models.clients import Client, Employee
@@ -20,6 +17,8 @@ from app.services.report_generator import ReportGenerator
 
 router = APIRouter()
 
+_reader = require_role(["admin", "contador", "gerente", "viewer"])
+
 
 @router.get("/balance-sheet")
 async def download_balance_sheet(
@@ -27,6 +26,7 @@ async def download_balance_sheet(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_report_data(company.id, end_date, db)
@@ -40,6 +40,7 @@ async def download_income_statement(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_income_data(company.id, start_date, end_date, db)
@@ -53,6 +54,7 @@ async def download_cash_flow(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     return await generator.generate_report("cash_flow", {}, format)
@@ -64,6 +66,7 @@ async def download_trial_balance(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_trial_balance_data(company.id, end_date, db)
@@ -75,6 +78,7 @@ async def download_accounts_receivable(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_receivable_data(company.id, db)
@@ -86,6 +90,7 @@ async def download_inventory_report(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_inventory_data(company.id, db)
@@ -97,6 +102,7 @@ async def download_payroll_report(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_payroll_data(company.id, db)
@@ -110,6 +116,7 @@ async def download_tax_report(
     format: str = Query(default="pdf"),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     generator = ReportGenerator(company, db)
     data = await _get_tax_data(company.id, start_date, end_date, db)

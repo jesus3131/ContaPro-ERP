@@ -1,12 +1,9 @@
-# Módulo: payroll
-# Propósito: Gestión de nómina — períodos de pago, liquidación de empleados y asentamientos contables.
-# Funcionalidades principales: Creación y consulta de períodos de nómina, liquidación de empleados con cálculo de prestaciones sociales y consulta de asentamientos.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import date
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company
+from app.core.deps import get_current_user, get_current_company, require_role
 from app.models.user import User, Company
 from app.models.payroll import PayrollPeriod, PayrollSettlement
 from app.models.clients import Employee
@@ -15,17 +12,23 @@ from sqlalchemy.orm import joinedload
 
 router = APIRouter()
 
+_reader = require_role(["admin", "contador", "gerente", "viewer"])
+_writer = require_role(["admin", "contador", "gerente"])
+
 
 @router.get("/periods")
 async def list_periods(
     year: int | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     query = select(PayrollPeriod).where(PayrollPeriod.company_id == company.id)
     if year:
         query = query.where(PayrollPeriod.year == year)
-    query = query.order_by(PayrollPeriod.year.desc(), PayrollPeriod.month.desc())
+    query = query.order_by(PayrollPeriod.year.desc(), PayrollPeriod.month.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     periods = result.scalars().all()
     return [
@@ -46,6 +49,7 @@ async def create_period(
     year: int, month: int, period_type: str = "Monthly",
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     existing = await db.execute(
         select(PayrollPeriod).where(
@@ -80,6 +84,7 @@ async def settle_payroll(
     company: Company = Depends(get_current_company),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin", "contador", "gerente"])),
 ):
     period = await db.get(PayrollPeriod, period_id)
     if not period or period.company_id != company.id:
@@ -111,14 +116,17 @@ async def settle_payroll(
 @router.get("/settlements")
 async def list_settlements(
     period_id: int = Query(...),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     result = await db.execute(
         select(PayrollSettlement).options(joinedload(PayrollSettlement.employee)).where(
             PayrollSettlement.company_id == company.id,
             PayrollSettlement.period_id == period_id,
-        )
+        ).offset(skip).limit(limit)
     )
     settlements = result.scalars().all()
     response = []

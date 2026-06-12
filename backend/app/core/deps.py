@@ -1,6 +1,3 @@
-# deps.py
-# Propósito: Dependencias FastAPI: obtener usuario actual, verificar permisos
-
 from typing import Optional
 from fastapi import Depends, HTTPException, status, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -33,11 +30,13 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
     request.state.user_id = str(user.id)
-    # set_config is PostgreSQL-only, skip for SQLite
+    # Store JWT claims for RBAC
+    request.state.token_company_id = payload.get("company_id")
+    request.state.token_role = payload.get("role")
     try:
         await db.execute(text("SELECT set_config('app.current_user_id', :uid, true)"), {"uid": str(user.id)})
     except Exception:
-        pass  # set_config not supported on SQLite
+        pass
     return user
 
 
@@ -59,8 +58,34 @@ async def get_current_company(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active company found")
 
     request.state.company_id = str(company.id)
+
+    # Also store role from DB into request.state for RBAC
+    uc_result = await db.execute(
+        select(UserCompany).where(
+            UserCompany.user_id == current_user.id,
+            UserCompany.company_id == company.id,
+        )
+    )
+    uc = uc_result.scalars().first()
+    request.state.db_role = uc.role if uc else "viewer"
+
     try:
         await db.execute(text("SELECT set_config('app.current_company_id', :cid, true)"), {"cid": str(company.id)})
     except Exception:
-        pass  # set_config not supported on SQLite
+        pass
     return company
+
+
+def require_role(allowed_roles: list[str]):
+    """Dependency factory: verifies the user has one of the allowed roles."""
+    async def role_checker(request: Request, current_user: User = Depends(get_current_user)):
+        role = getattr(request.state, "db_role", None) or getattr(request.state, "token_role", None)
+        if current_user.is_superuser:
+            return True
+        if role is None or role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{role}' not authorized. Required one of: {', '.join(allowed_roles)}",
+            )
+        return True
+    return role_checker

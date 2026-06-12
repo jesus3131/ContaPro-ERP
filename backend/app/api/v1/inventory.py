@@ -1,16 +1,18 @@
-# Módulo: inventory
-# Propósito: Control de inventario — productos, movimientos de stock, kardex y alertas de inventario.
-# Funcionalidades principales: CRUD de productos, registro de entradas/salidas con actualización de costos, consulta de kardex valorizado y alertas de stock mínimo.
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from typing import Optional
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company
+from app.core.deps import get_current_user, get_current_company, require_role
 from app.models.user import User, Company
 from app.models.inventory import Product, InventoryMovement, Kardex, MovementType, CostingMethod
 from app.schemas.inventory import ProductCreate, ProductUpdate, ProductResponse, InventoryMovementCreate, KardexResponse
 
 router = APIRouter()
+
+_reader = require_role(["admin", "contador", "inventario", "gerente", "viewer"])
+_writer = require_role(["admin", "inventario", "gerente"])
+_editor = require_role(["admin", "inventario", "gerente"])
 
 
 @router.post("/products", response_model=ProductResponse)
@@ -18,6 +20,7 @@ async def create_product(
     request: ProductCreate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     product = Product(company_id=company.id, **request.model_dump())
     db.add(product)
@@ -27,15 +30,26 @@ async def create_product(
 
 
 @router.get("/products", response_model=list[ProductResponse])
-async def list_products(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def list_products(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Product).where(Product.company_id == company.id).order_by(Product.name)
+        select(Product).where(Product.company_id == company.id).order_by(Product.name).offset(skip).limit(limit)
     )
     return [ProductResponse.model_validate(p) for p in result.scalars().all()]
 
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
-async def get_product(product_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_product(
+    product_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Product).where(Product.id == product_id, Product.company_id == company.id)
     )
@@ -51,6 +65,7 @@ async def update_product(
     request: ProductUpdate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_editor),
 ):
     result = await db.execute(
         select(Product).where(Product.id == product_id, Product.company_id == company.id)
@@ -71,6 +86,7 @@ async def delete_product(
     product_id: int,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin"])),
 ):
     result = await db.execute(
         select(Product).where(Product.id == product_id, Product.company_id == company.id)
@@ -89,6 +105,7 @@ async def create_movement(
     company: Company = Depends(get_current_company),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     product_result = await db.execute(
         select(Product).where(Product.id == request.product_id, Product.company_id == company.id)
@@ -154,18 +171,29 @@ async def create_movement(
 
 
 @router.get("/kardex/{product_id}", response_model=list[KardexResponse])
-async def get_kardex(product_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_kardex(
+    product_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=1000),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Kardex).where(
             Kardex.product_id == product_id,
             Kardex.company_id == company.id,
-        ).order_by(Kardex.date)
+        ).order_by(Kardex.date).offset(skip).limit(limit)
     )
     return [KardexResponse.model_validate(k) for k in result.scalars().all()]
 
 
 @router.get("/stock-alerts")
-async def get_stock_alerts(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_stock_alerts(
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Product).where(
             Product.company_id == company.id,

@@ -1,13 +1,10 @@
-# main.py
-# Propósito: Punto de entrada de la aplicación FastAPI: routers, middleware CORS, startup
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.database import init_db
 from app.db.seed import seed_default_admin
 import app.models
-from app.api.v1 import auth, accounting, financial, clients, invoicing, inventory, payroll, reports, ai, dashboard
+from app.api.v1 import auth, accounting, financial, clients, invoicing, inventory, payroll, reports, ai, dashboard, admin
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -36,6 +33,13 @@ app.include_router(payroll.router, prefix=f"{settings.API_STR}/payroll", tags=["
 app.include_router(reports.router, prefix=f"{settings.API_STR}/reports", tags=["Reportes"])
 app.include_router(ai.router, prefix=f"{settings.API_STR}/ai", tags=["Inteligencia Artificial"])
 app.include_router(dashboard.router, prefix=f"{settings.API_STR}/dashboard", tags=["Dashboard"])
+app.include_router(admin.router, prefix=f"{settings.API_STR}/admin", tags=["Administración"])
+
+# Validate SECRET_KEY in production-like environments
+if settings.SECRET_KEY in ("your-secret-key-change-in-production", "contapro-supabase-secret-key-change-in-production"):
+    import os
+    if not os.getenv("SECRET_KEY"):
+        print("⚠ WARNING: Using default SECRET_KEY. Set SECRET_KEY env var in production.")
 
 
 @app.on_event("startup")

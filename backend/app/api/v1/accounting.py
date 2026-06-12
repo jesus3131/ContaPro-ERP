@@ -1,6 +1,3 @@
-# Módulo: accounting
-# Propósito: Gestión contable — PUC (Plan Único de Cuentas), asientos contables, balance de prueba y estados financieros.
-# Funcionalidades principales: CRUD de cuentas, siembra del PUC colombiano, creación y consulta de asientos contables, balance de comprobación, balance general y estado de resultados.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, text
@@ -8,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from datetime import date
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company
+from app.core.deps import get_current_user, get_current_company, require_role
 from app.models.user import User, Company
 from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType, Closing
 from app.schemas.accounting import (
@@ -19,17 +16,30 @@ from app.services.puc_colombia import PUC_COLOMBIA
 
 router = APIRouter()
 
+_reader = require_role(["admin", "contador", "gerente", "viewer"])
+_writer = require_role(["admin", "contador", "gerente"])
+
 
 @router.get("/puc", response_model=list[AccountResponse])
-async def get_puc(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_puc(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=1000),
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
-        select(Account).where(Account.company_id == company.id).order_by(Account.code)
+        select(Account).where(Account.company_id == company.id).order_by(Account.code).offset(skip).limit(limit)
     )
     return [AccountResponse.model_validate(a) for a in result.scalars().all()]
 
 
 @router.post("/puc/seed")
-async def seed_puc(company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def seed_puc(
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(["admin"])),
+):
     existing = await db.execute(
         select(Account).where(Account.company_id == company.id).limit(1)
     )
@@ -63,6 +73,7 @@ async def create_account(
     request: AccountCreate,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     account = Account(company_id=company.id, **request.model_dump())
     db.add(account)
@@ -72,7 +83,12 @@ async def create_account(
 
 
 @router.get("/accounts/{account_id}", response_model=AccountResponse)
-async def get_account(account_id: int, company: Company = Depends(get_current_company), db: AsyncSession = Depends(get_db)):
+async def get_account(
+    account_id: int,
+    company: Company = Depends(get_current_company),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
+):
     result = await db.execute(
         select(Account).where(Account.id == account_id, Account.company_id == company.id)
     )
@@ -88,6 +104,7 @@ async def create_entry(
     company: Company = Depends(get_current_company),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_writer),
 ):
     last_entry = await db.execute(
         select(func.max(AccountingEntry.entry_number)).where(
@@ -149,9 +166,11 @@ async def list_entries(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     entry_type: Optional[str] = None,
-    limit: int = Query(default=100, le=500),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     query = select(AccountingEntry).options(
         selectinload(AccountingEntry.details).selectinload(AccountingEntryDetail.account)
@@ -163,7 +182,7 @@ async def list_entries(
     if entry_type:
         query = query.where(AccountingEntry.entry_type == entry_type)
 
-    query = query.order_by(AccountingEntry.date.desc(), AccountingEntry.id.desc()).limit(limit)
+    query = query.order_by(AccountingEntry.date.desc(), AccountingEntry.id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return [AccountingEntryResponse.model_validate(e) for e in result.scalars().all()]
 
@@ -200,6 +219,7 @@ async def trial_balance(
     end_date: date,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     accounts = await db.execute(
         select(Account).where(
@@ -237,6 +257,7 @@ async def balance_sheet(
     end_date: date,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     result = await _get_financial_statement(company.id, end_date, db)
     return [r for r in result if r.balance != 0]
@@ -248,6 +269,7 @@ async def income_statement(
     end_date: date,
     company: Company = Depends(get_current_company),
     db: AsyncSession = Depends(get_db),
+    _=Depends(_reader),
 ):
     income_types = [AccountType.INGRESO, AccountType.GASTO, AccountType.COSTO]
     accounts = await db.execute(
