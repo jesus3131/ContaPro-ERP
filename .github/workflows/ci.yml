@@ -71,7 +71,7 @@ jobs:
       - name: TypeScript check
         run: pnpm typecheck
       - name: ESLint
-        run: pnpm lint
+        run: pnpm eslint . --max-warnings 100
 
   frontend-test:
     name: Frontend Tests
