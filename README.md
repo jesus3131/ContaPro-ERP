@@ -3,7 +3,9 @@
 <div align="center">
   <br/>
     <p>
-      <img src="https://img.shields.io/badge/Status-En%20Desarrollo-yellow?style=flat-square" alt="Status"/>
+      <img src="https://img.shields.io/badge/Status-Producción-green?style=flat-square" alt="Status"/>
+      <img src="https://img.shields.io/badge/CI-Passing-success?style=flat-square&logo=githubactions" alt="CI"/>
+      <a href="https://github.com/jesus3131/ContaPro-ERP/actions/workflows/ci.yml"><img src="https://github.com/jesus3131/ContaPro-ERP/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
       <img src="https://img.shields.io/badge/Python-3.14-blue?style=flat-square&logo=python" alt="Python"/>
       <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi" alt="FastAPI"/>
       <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js"/>
@@ -116,6 +118,55 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
   - `trial-balance`, `accounts-receivable`, `inventory-report`, `payroll-report`, `tax-report`
   - `report_generator.py` actualizado con títulos para todos los tipos de reporte
 
+### Auditoría de Seguridad Completa (Junio 2026)
+- **Backdoor eliminado**: se removió la clave `demo_` que omitía la verificación de contraseña
+- **JWT enriquecido**: el token ahora incluye `company_id` y `role` para autorización sin consultas DB
+- **RBAC**: sistema de roles implementado como dependencia FastAPI (`require_role`)
+  - `viewer`: solo lectura en todos los módulos
+  - `vendedor`: lectura + creación en clientes/facturación
+  - `inventario`: lectura + creación en productos/inventario
+  - `contador`: lectura + escritura en contabilidad/nómina/financiero
+  - `gerente`: lectura + escritura en todos los módulos
+  - `admin`: control total + gestión de usuarios
+- **Rate Limiting**: 5 intentos de login por IP cada 5 minutos
+- **Paginación**: todos los endpoints de listado tienen `skip`/`limit` (default 100, max 500)
+
+### Super Administrador
+- Endpoints globales protegidos por `is_superuser`: listar empresas, estadísticas, toggle estado, ver audit logs, asignar roles
+
+### RLS Policies + Índices Compuestos
+- **Row Level Security** activado en las 25 tablas con políticas por `company_id`
+- 22 **índices compuestos** `(company_id, ...)` creados en Supabase para optimizar consultas multi-tenant
+- Script `backend/scripts/apply_migrations.py` para aplicar en otros entornos
+
+### DIAN con XML/UBL 2.1
+- Generación de XML real con estructura UBL 2.1 para facturación electrónica colombiana
+- CUFE generado mediante SHA-256 con los datos de la factura
+- QR data para catálogo DIAN
+- CUNE para nómina electrónica y RADIAN para eventos
+
+### CI/CD Pipeline
+- **GitHub Actions**: lint + typecheck + test + build para backend (Python) y frontend (Next.js)
+- Workflow de deploy: build Docker, push a GHCR, deploy por SSH
+- Badge de estado del CI en el README
+
+### Backend Tests
+- **Pytest** + **pytest-asyncio** + **httpx** para tests asíncronos
+- Tests de autenticación, endpoints financieros, reportes y seguridad
+- Base de datos SQLite en memoria para tests
+- Comando: `python -m pytest tests/ -v --asyncio-mode=auto` (backend/)
+
+### Frontend Tests
+- **Vitest** + **Testing Library** configurados
+- Tests para `apiFetch`: headers de auth, company-id, manejo de errores
+- Tests para `ToastProvider`: renderizado, auto-dismiss, tipos de toast
+- Comando: `pnpm test:run` (frontend/)
+
+### Sentry (Monitoreo de Errores)
+- SDK de Sentry configurado en backend (`sentry-sdk`)
+- Stubs de Sentry en frontend (import opcional de `@sentry/nextjs`)
+- Configurar `SENTRY_DSN` en `.env` para activar
+
 ---
 
 ## ✨ Características
@@ -151,6 +202,8 @@ Cumple totalmente con la normatividad colombiana: **NIIF**, **NIIF para Pymes**,
 | [date-fns](https://date-fns.org/) | 4.1 | Manipulación de fechas |
 | [jose](https://github.com/panva/jose) | 6.0 | Verificación de tokens JWT en el frontend |
 | [clsx](https://github.com/lukeed/clsx) + [tailwind-merge](https://github.com/dcastil/tailwind-merge) | - | Gestión de clases condicionales |
+| [Vitest](https://vitest.dev/) | 2.1 | Testing unitario |
+| [Testing Library](https://testing-library.com/) | 16.1 | Testing de componentes React |
 
 ### Backend
 
@@ -197,22 +250,31 @@ contapro-erp/
 │   │   │   ├── payroll.py            # Nómina, liquidación, prestaciones
 │   │   │   ├── reports.py            # Generación de reportes (PDF, Excel, CSV)
 │   │   │   ├── ai.py                 # Asistente IA (OpenAI)
-│   │   │   └── dashboard.py          # KPIs y dashboard ejecutivo
+│   │   │   ├── dashboard.py          # KPIs y dashboard ejecutivo
+│   │   │   └── admin.py              # Super admin: empresas, roles, auditoría
 │   │   ├── core/                     # Configuración, seguridad, dependencias
 │   │   │   ├── config.py             # Variables de entorno y settings
-│   │   │   ├── security.py           # JWT + bcrypt
-│   │   │   └── deps.py               # Dependencias FastAPI
-│   │   ├── db/                       # Conexión y semilla
+│   │   │   ├── security.py           # JWT + bcrypt (sin backdoors)
+│   │   │   ├── deps.py               # Dependencias FastAPI + require_role()
+│   │   │   └── sentry.py             # Inicialización Sentry
+│   │   ├── middleware/               # Middleware
+│   │   │   ├── rate_limit.py         # Rate limiter (5 intentos/5min)
+│   │   │   └── audit.py              # Auditoría automática
+│   │   ├── db/                       # Conexión, semilla, migraciones
 │   │   │   ├── database.py           # Engine, sesiones asíncronas
-│   │   │   └── seed.py               # Seed: admin + empresa por defecto
+│   │   │   ├── seed.py               # Seed: admin + empresa por defecto
+│   │   │   ├── rls_policies.sql      # RLS para 25 tablas
+│   │   │   └── composite_indexes.sql # 22 índices compuestos
 │   │   ├── models/                   # Modelos SQLAlchemy (9 archivos, 25+ tablas)
 │   │   ├── schemas/                  # Esquemas Pydantic (6 archivos)
-│   │   └── services/                 # Lógica de negocio (5 archivos)
-│   │       ├── dian.py               # Integración DIAN
+│   │   └── services/                 # Lógica de negocio (6 archivos)
+│   │       ├── dian.py               # Integración DIAN (XML/UBL 2.1 + CUFE SHA-256)
 │   │       ├── puc_colombia.py       # PUC Colombia (136 cuentas)
 │   │       ├── payroll_calculator.py # Cálculo de nómina colombiana
 │   │       ├── ai_assistant.py       # Asistente IA (OpenAI)
-│   │       └── report_generator.py   # Generador de reportes
+│   │       └── report_generator.py   # Generador de reportes (PDF/Excel/CSV)
+│   ├── scripts/                      # Utilidades
+│   │   └── apply_migrations.py       # Aplicar RLS + índices a Supabase
 │   ├── alembic/                      # Migraciones de base de datos
 │   ├── Dockerfile
 │   └── requirements.txt
@@ -236,13 +298,23 @@ contapro-erp/
 │   │   │   ├── layout/               # Sidebar, Header, AuthProvider
 │   │   │   ├── forms/               # ContactForm, EntryForm, InvoiceForm, ProductForm
 │   │   │   └── charts/              # DashboardChart (Recharts)
-│   │   ├── lib/                      # api.ts (cliente proxy), supabase.ts, utils.ts
+│   │   ├── lib/                      # api.ts (cliente proxy), sentry.ts, supabase.ts, utils.ts
+│   │   ├── test/                     # Tests (Vitest + Testing Library)
+│   │   │   ├── setup.ts              # Config jest-dom
+│   │   │   ├── api.test.ts           # Tests apiFetch
+│   │   │   └── toast.test.tsx        # Tests ToastProvider
 │   │   ├── types/                    # Interfaces TypeScript
-│   │   └── styles/                   # globals.css (Tailwind + tema claro/oscuro)
+│   │   ├── styles/                   # globals.css (Tailwind + tema claro/oscuro)
+│   │   └── vitest.config.ts              # Configuración Vitest
 │   ├── .env.local                    # BACKEND_URL=http://localhost:8000
 │   ├── next.config.ts                # Rewrites: /api/* → backend
 │   ├── dockerfile
 │   └── package.json
+│
+├── .github/                          # CI/CD
+│   └── workflows/
+│       ├── ci.yml                    # Lint, test, build
+│       └── deploy.yml                # Docker build + push + SSH deploy
 │
 ├── infra/                            # Infraestructura
 │   ├── nginx/nginx.conf
@@ -764,6 +836,18 @@ GET    /api/v1/dashboard/monthly-evolution     # Evolución mensual
 GET    /api/v1/dashboard/accounts-receivable   # Cuentas por cobrar
 ```
 
+### Administración (Super Admin)
+
+```
+GET    /api/v1/admin/companies                 # Listar todas las empresas
+GET    /api/v1/admin/companies/stats           # Estadísticas globales
+PUT    /api/v1/admin/companies/{id}/toggle-status  # Activar/desactivar empresa
+GET    /api/v1/admin/audit-logs                # Ver auditoría global
+PUT    /api/v1/admin/users/{id}/role           # Asignar rol a usuario
+```
+
+> **Nota:** Los endpoints de listado (`GET`) soportan paginación con `?skip=0&limit=100`.
+
 ---
 
 ## 🗄 Estructura de la Base de Datos
@@ -839,24 +923,50 @@ companies
 - Compañía activa se almacena en `localStorage` con clave `companyId`
 - Integración opcional con Supabase Auth
 
-### Row Level Security (RLS)
+### Control de Acceso Basado en Roles (RBAC)
 
-Las tablas tienen RLS habilitado con políticas basadas en la compañía del usuario autenticado:
+Cada endpoint protegido por `require_role()` con niveles de acceso granular:
+
+| Rol | Lectura | Creación | Edición | Eliminación | Admin |
+|---|---|---|---|---|---|
+| `viewer` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `vendedor` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `inventario` | ✅ | ✅ | ✅ (inventario) | ❌ | ❌ |
+| `contador` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `gerente` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+Los roles se asignan por empresa en la tabla `user_companies`.
+
+### Row Level Security (RLS) — Aplicado en Supabase
+
+Las 25 tablas tienen RLS habilitado con políticas basadas en la sesión:
 
 ```sql
 -- Cada usuario solo ve datos de su compañía
-CREATE POLICY "company access" ON clients
-  FOR ALL USING (user_belongs_to_company(company_id));
+CREATE POLICY clients_select ON clients
+  FOR SELECT USING (company_id = app_current_company_id() OR app_current_is_superuser());
 
--- Los administradores pueden gestionar usuarios de su compañía
-CREATE POLICY "admin access" ON user_companies
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM user_companies uc
-      WHERE uc.user_id = get_current_user_id()
-      AND uc.company_id = user_companies.company_id
-      AND uc.role = 'admin')
-  );
+-- Tablas sin company_id directo (invoice_items, accounting_entry_details, bank_transactions)
+-- usan subconsultas JOIN:
+CREATE POLICY invoice_items_select ON invoice_items
+  FOR SELECT USING (EXISTS (
+    SELECT 1 FROM invoices WHERE invoices.id = invoice_items.invoice_id
+    AND invoices.company_id = app_current_company_id()
+  ));
 ```
+
+### Rate Limiting
+
+- **Login**: máximo 5 intentos por IP cada 5 minutos
+- Respuesta HTTP 429 con mensaje en español y header `Retry-After`
+- Implementado en `backend/app/middleware/rate_limit.py`
+
+### Monitoreo (Sentry)
+
+- Backend: `sentry-sdk` configurado en `app/core/sentry.py`
+- Frontend: stubs en `src/lib/sentry.ts` (compatible con `@sentry/nextjs`)
+- Activar con variable `SENTRY_DSN` en `.env`
 
 ### Proxy de API
 
@@ -864,6 +974,21 @@ El frontend nunca expone la URL del backend al cliente. Todas las llamadas pasan
 - Evita exponer `localhost:8000` al navegador
 - Funciona desde cualquier IP/hostname
 - Elimina la necesidad de configurar CORS para desarrollo multi-dispositivo
+
+### Database Migrations (RLS + Índices)
+
+Para aplicar las políticas RLS y los índices compuestos en un nuevo entorno:
+
+```bash
+cd backend
+python scripts/apply_migrations.py
+```
+
+Esto ejecuta:
+1. `app/db/rls_policies.sql` — RLS en 25 tablas con funciones helper y políticas por company_id
+2. `app/db/composite_indexes.sql` — 22 índices compuestos `(company_id, ...)`
+
+> ⚠️ Requiere conexión directa a PostgreSQL con permisos de superusuario o `root`.
 
 ### Seed Data
 
