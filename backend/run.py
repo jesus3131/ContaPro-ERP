@@ -8,9 +8,7 @@ import selectors
 use_sqlite = os.getenv("USE_SQLITE", "false").lower() == "true"
 
 # psycopg async requires SelectorEventLoop on Windows; aiosqlite works with ProactorEventLoop
-if sys.platform == "win32" and not use_sqlite:
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
+# Python 3.14+: WindowsSelectorEventLoopPolicy deprecated, use SelectorEventLoop directly
 from uvicorn import Config, Server
 
 if __name__ == "__main__":
@@ -19,6 +17,9 @@ if __name__ == "__main__":
     if sys.platform == "win32" and not use_sqlite:
         loop = asyncio.SelectorEventLoop(selectors.SelectSelector())
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(server.serve())
+        try:
+            loop.run_until_complete(server.serve())
+        finally:
+            loop.close()
     else:
         asyncio.run(server.serve())
