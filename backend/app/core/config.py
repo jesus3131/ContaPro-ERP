@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     DIAN_API_KEY: Optional[str] = None
     DIAN_TEST_MODE: bool = True
 
+    SENTRY_DSN: Optional[str] = None
+
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None

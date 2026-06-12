@@ -93,44 +93,40 @@ CREATE POLICY user_companies_delete ON user_companies FOR DELETE USING (
 -- Generic policy template for all tenant-scoped tables:
 --   FOR ALL USING (company_id = app_current_company_id() OR app_current_is_superuser())
 
+-- Tables with direct company_id column
 DO $$
 DECLARE
   tables_list TEXT[] := ARRAY[
     'audit_logs', 'clients', 'suppliers', 'employees',
     'products', 'inventory_movements', 'kardex',
-    'invoices', 'invoice_items', 'credit_notes', 'debit_notes',
-    'accounts', 'accounting_entries', 'accounting_entry_details', 'closings',
+    'invoices', 'credit_notes', 'debit_notes',
+    'accounts', 'accounting_entries', 'closings',
     'budgets', 'cash_flow_projections', 'financial_indicators',
-    'bank_accounts', 'bank_transactions',
+    'bank_accounts',
     'payroll_periods', 'payroll_settlements'
   ];
   t TEXT;
   policy_name TEXT;
 BEGIN
   FOREACH t IN ARRAY tables_list LOOP
-    -- Drop existing policies first (idempotent)
     FOR policy_name IN (
       SELECT policyname FROM pg_policies WHERE tablename = t AND schemaname = 'public'
     ) LOOP
       EXECUTE format('DROP POLICY IF EXISTS %I ON %I', policy_name, t);
     END LOOP;
 
-    -- Select policy
     EXECUTE format(
       'CREATE POLICY %I_select ON %I FOR SELECT USING (company_id = app_current_company_id() OR app_current_is_superuser())',
       t, t
     );
-    -- Insert policy
     EXECUTE format(
       'CREATE POLICY %I_insert ON %I FOR INSERT WITH CHECK (company_id = app_current_company_id() OR app_current_is_superuser())',
       t, t
     );
-    -- Update policy
     EXECUTE format(
       'CREATE POLICY %I_update ON %I FOR UPDATE USING (company_id = app_current_company_id() OR app_current_is_superuser()) WITH CHECK (company_id = app_current_company_id() OR app_current_is_superuser())',
       t, t
     );
-    -- Delete policy
     EXECUTE format(
       'CREATE POLICY %I_delete ON %I FOR DELETE USING (company_id = app_current_company_id() OR app_current_is_superuser())',
       t, t
@@ -138,3 +134,84 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+-- invoice_items: no direct company_id, join through invoices
+ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS invoice_items_select ON invoice_items;
+DROP POLICY IF EXISTS invoice_items_insert ON invoice_items;
+DROP POLICY IF EXISTS invoice_items_update ON invoice_items;
+DROP POLICY IF EXISTS invoice_items_delete ON invoice_items;
+CREATE POLICY invoice_items_select ON invoice_items FOR SELECT USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM invoices WHERE invoices.id = invoice_items.invoice_id AND invoices.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY invoice_items_insert ON invoice_items FOR INSERT WITH CHECK (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM invoices WHERE invoices.id = invoice_items.invoice_id AND invoices.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY invoice_items_update ON invoice_items FOR UPDATE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM invoices WHERE invoices.id = invoice_items.invoice_id AND invoices.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY invoice_items_delete ON invoice_items FOR DELETE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM invoices WHERE invoices.id = invoice_items.invoice_id AND invoices.company_id = app_current_company_id()
+  )
+);
+
+-- accounting_entry_details: no direct company_id, join through accounting_entries
+ALTER TABLE accounting_entry_details ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS accounting_entry_details_select ON accounting_entry_details;
+DROP POLICY IF EXISTS accounting_entry_details_insert ON accounting_entry_details;
+DROP POLICY IF EXISTS accounting_entry_details_update ON accounting_entry_details;
+DROP POLICY IF EXISTS accounting_entry_details_delete ON accounting_entry_details;
+CREATE POLICY accounting_entry_details_select ON accounting_entry_details FOR SELECT USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM accounting_entries WHERE accounting_entries.id = accounting_entry_details.entry_id AND accounting_entries.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY accounting_entry_details_insert ON accounting_entry_details FOR INSERT WITH CHECK (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM accounting_entries WHERE accounting_entries.id = accounting_entry_details.entry_id AND accounting_entries.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY accounting_entry_details_update ON accounting_entry_details FOR UPDATE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM accounting_entries WHERE accounting_entries.id = accounting_entry_details.entry_id AND accounting_entries.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY accounting_entry_details_delete ON accounting_entry_details FOR DELETE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM accounting_entries WHERE accounting_entries.id = accounting_entry_details.entry_id AND accounting_entries.company_id = app_current_company_id()
+  )
+);
+
+-- bank_transactions: no direct company_id, join through bank_accounts
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS bank_transactions_select ON bank_transactions;
+DROP POLICY IF EXISTS bank_transactions_insert ON bank_transactions;
+DROP POLICY IF EXISTS bank_transactions_update ON bank_transactions;
+DROP POLICY IF EXISTS bank_transactions_delete ON bank_transactions;
+CREATE POLICY bank_transactions_select ON bank_transactions FOR SELECT USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM bank_accounts WHERE bank_accounts.id = bank_transactions.bank_account_id AND bank_accounts.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY bank_transactions_insert ON bank_transactions FOR INSERT WITH CHECK (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM bank_accounts WHERE bank_accounts.id = bank_transactions.bank_account_id AND bank_accounts.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY bank_transactions_update ON bank_transactions FOR UPDATE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM bank_accounts WHERE bank_accounts.id = bank_transactions.bank_account_id AND bank_accounts.company_id = app_current_company_id()
+  )
+);
+CREATE POLICY bank_transactions_delete ON bank_transactions FOR DELETE USING (
+  app_current_is_superuser() OR EXISTS (
+    SELECT 1 FROM bank_accounts WHERE bank_accounts.id = bank_transactions.bank_account_id AND bank_accounts.company_id = app_current_company_id()
+  )
+);

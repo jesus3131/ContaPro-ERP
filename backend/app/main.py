@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.sentry import init_sentry
 from app.db.database import init_db
 from app.db.seed import seed_default_admin
 import app.models
@@ -34,6 +35,9 @@ app.include_router(reports.router, prefix=f"{settings.API_STR}/reports", tags=["
 app.include_router(ai.router, prefix=f"{settings.API_STR}/ai", tags=["Inteligencia Artificial"])
 app.include_router(dashboard.router, prefix=f"{settings.API_STR}/dashboard", tags=["Dashboard"])
 app.include_router(admin.router, prefix=f"{settings.API_STR}/admin", tags=["Administración"])
+
+# Initialize Sentry for error monitoring
+init_sentry()
 
 # Validate SECRET_KEY in production-like environments
 if settings.SECRET_KEY in ("your-secret-key-change-in-production", "contapro-supabase-secret-key-change-in-production"):
