@@ -1,12 +1,16 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.deps import get_current_company, get_current_user, require_role
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company, require_role
-from app.models.user import User, Company
-from app.models.inventory import Product, InventoryMovement, Kardex, MovementType, CostingMethod
-from app.schemas.inventory import ProductCreate, ProductUpdate, ProductResponse, InventoryMovementCreate, KardexResponse
+from app.models.inventory import (CostingMethod, InventoryMovement, Kardex,
+                                  Product)
+from app.models.user import Company, User
+from app.schemas.inventory import (InventoryMovementCreate, KardexResponse,
+                                   ProductCreate, ProductResponse,
+                                   ProductUpdate)
 
 router = APIRouter()
 

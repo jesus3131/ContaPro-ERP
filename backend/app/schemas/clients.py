@@ -1,8 +1,9 @@
 # Módulo: clients.py
 # Propósito: Esquemas Pydantic para clientes, proveedores, empleados
-from pydantic import BaseModel, EmailStr, Field
+from datetime import date
 from typing import Optional
-from datetime import datetime, date
+
+from pydantic import BaseModel, EmailStr
 
 
 class ClientCreate(BaseModel):

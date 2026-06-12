@@ -1,5 +1,5 @@
 from fastapi import Request
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.database import async_session
 from app.models.user import AuditLog
 

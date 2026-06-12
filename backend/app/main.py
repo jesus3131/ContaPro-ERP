@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+import app.models
+from app.api.v1 import (accounting, admin, ai, auth, clients, dashboard,
+                        financial, inventory, invoicing, payroll, reports)
 from app.core.config import settings
 from app.core.sentry import init_sentry
 from app.db.database import init_db
 from app.db.seed import seed_default_admin
-import app.models
-from app.api.v1 import auth, accounting, financial, clients, invoicing, inventory, payroll, reports, ai, dashboard, admin
 
 app = FastAPI(
     title=settings.APP_NAME,

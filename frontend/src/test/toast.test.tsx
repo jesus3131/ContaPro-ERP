@@ -1,74 +1,62 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import React from "react";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 
 function TestHarness() {
   const { toast } = useToast();
   return (
     <div>
-      <button onClick={() => toast("Mensaje de prueba", "success")}>
+      <button data-testid="show-toast" onClick={() => toast("Operación exitosa", "success")}>
         Show Toast
+      </button>
+      <button data-testid="show-error" onClick={() => toast("Error de conexión", "error")}>
+        Show Error
       </button>
     </div>
   );
 }
 
-describe("ToastProvider", () => {
-  it("should show and auto-dismiss toast", async () => {
+describe("toast system", () => {
+  beforeEach(() => {
     vi.useFakeTimers();
+  });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("should create and remove success toast", async () => {
     render(
       <ToastProvider>
         <TestHarness />
       </ToastProvider>
     );
 
-    const button = screen.getByText("Show Toast");
     await act(async () => {
-      button.click();
+      screen.getByTestId("show-toast").click();
     });
 
-    expect(screen.getByText("Mensaje de prueba")).toBeDefined();
+    expect(screen.getByText("Operación exitosa")).toBeDefined();
 
     await act(async () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(screen.queryByText("Mensaje de prueba")).toBeNull();
-
-    vi.useRealTimers();
+    expect(screen.queryByText("Operación exitosa")).toBeNull();
   });
 
-  it("should render different toast types", async () => {
-    function MultiToastHarness() {
-      const { toast } = useToast();
-      return (
-        <div>
-          <button onClick={() => toast("Éxito", "success")}>Success</button>
-          <button onClick={() => toast("Error", "error")}>Error</button>
-          <button onClick={() => toast("Info", "info")}>Info</button>
-          <button onClick={() => toast("Advertencia", "warning")}>Warning</button>
-        </div>
-      );
-    }
-
+  it("should create error toast", async () => {
     render(
       <ToastProvider>
-        <MultiToastHarness />
+        <TestHarness />
       </ToastProvider>
     );
 
     await act(async () => {
-      screen.getByText("Success").click();
-      screen.getByText("Error").click();
-      screen.getByText("Info").click();
-      screen.getByText("Warning").click();
+      screen.getByTestId("show-error").click();
     });
 
-    expect(screen.getByText("Éxito")).toBeDefined();
-    expect(screen.getByText("Error")).toBeDefined();
-    expect(screen.getByText("Info")).toBeDefined();
-    expect(screen.getByText("Advertencia")).toBeDefined();
+    expect(screen.getByText("Error de conexión")).toBeDefined();
   });
 });

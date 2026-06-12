@@ -1,12 +1,16 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional
-from app.db.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.deps import get_current_company, require_role
+from app.db.database import get_db
+from app.models.clients import Client, Employee, Supplier
 from app.models.user import Company
-from app.models.clients import Client, Supplier, Employee
-from app.schemas.clients import ClientCreate, ClientUpdate, ClientResponse, SupplierCreate, SupplierUpdate, SupplierResponse, EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from app.schemas.clients import (ClientCreate, ClientResponse, ClientUpdate,
+                                 EmployeeCreate, EmployeeResponse,
+                                 EmployeeUpdate, SupplierCreate,
+                                 SupplierResponse, SupplierUpdate)
 
 router = APIRouter()
 

@@ -1,9 +1,10 @@
 # Modelo: Financiero
 # Propósito: Administra presupuestos, proyecciones de flujo de caja e indicadores financieros para el análisis económico
 # Tablas principales: budgets, cash_flow_projections, financial_indicators
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date
-from sqlalchemy.orm import relationship
+from sqlalchemy import (Column, Date, DateTime, Float, ForeignKey, Integer,
+                        String, Text)
 from sqlalchemy.sql import func
+
 from app.db.database import Base
 
 

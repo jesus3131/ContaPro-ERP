@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 import calendar
 from datetime import date
-from app.db.database import get_db
-from app.core.deps import get_current_company, require_role
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import settings
+from app.core.deps import get_current_company, require_role
+from app.db.database import get_db
+from app.models.accounting import (Account, AccountingEntry,
+                                   AccountingEntryDetail, AccountType)
 from app.models.user import Company
-from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType
 from app.services.ai_assistant import AIAssistant
 
 router = APIRouter()

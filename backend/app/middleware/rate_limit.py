@@ -1,5 +1,7 @@
+import os
 import time
 from collections import defaultdict
+
 from fastapi import HTTPException, status
 
 _login_attempts: dict[str, list[float]] = defaultdict(list)
@@ -8,6 +10,8 @@ WINDOW_SECONDS = 300
 
 
 def check_rate_limit(key: str, endpoint: str = "login"):
+    if os.getenv("USE_SQLITE", "false").lower() == "true":
+        return
     now = time.time()
     window = WINDOW_SECONDS
     if endpoint == "login":

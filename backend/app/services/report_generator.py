@@ -1,11 +1,12 @@
 # Módulo: report_generator.py
 # Propósito: Generador de reportes: PDF y Excel para todos los módulos
-from fastapi.responses import Response
-from fastapi.encoders import jsonable_encoder
-from io import BytesIO
-from datetime import datetime
-import pandas as pd
 import json
+from datetime import datetime
+from io import BytesIO
+
+import pandas as pd
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import Response
 
 
 class ReportGenerator:

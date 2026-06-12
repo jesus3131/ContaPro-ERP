@@ -2,8 +2,9 @@
 # Propósito: Configuración general: variables de entorno, CORS, base de datos, API
 
 import os
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

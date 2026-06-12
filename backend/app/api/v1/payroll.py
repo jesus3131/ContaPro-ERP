@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from datetime import date
-from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company, require_role
-from app.models.user import User, Company
-from app.models.payroll import PayrollPeriod, PayrollSettlement
-from app.models.clients import Employee
-from app.services.payroll_calculator import PayrollCalculator
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+
+from app.core.deps import get_current_company, get_current_user, require_role
+from app.db.database import get_db
+from app.models.clients import Employee
+from app.models.payroll import PayrollPeriod, PayrollSettlement
+from app.models.user import Company, User
+from app.services.payroll_calculator import PayrollCalculator
 
 router = APIRouter()
 

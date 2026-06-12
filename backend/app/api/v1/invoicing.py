@@ -1,15 +1,15 @@
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
-from typing import Optional
+
+from app.core.deps import get_current_company, get_current_user, require_role
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company, require_role
-from app.models.user import User, Company
-from app.models.invoicing import Invoice, InvoiceItem, CreditNote, DebitNote
 from app.models.clients import Client
-from app.schemas.invoicing import InvoiceCreate, InvoiceResponse, DianValidationResponse
-from datetime import date
+from app.models.invoicing import Invoice, InvoiceItem
+from app.models.user import Company, User
+from app.schemas.invoicing import InvoiceCreate, InvoiceResponse
 from app.services.dian import DianService
 
 router = APIRouter()

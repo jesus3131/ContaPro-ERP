@@ -2,10 +2,10 @@
 # Propósito: Datos semilla: creación de usuario admin y empresa por defecto
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.database import async_session
-from app.models.user import User, Company, UserCompany
+
 from app.core.security import get_password_hash
+from app.db.database import async_session
+from app.models.user import Company, User, UserCompany
 
 
 async def seed_default_admin():

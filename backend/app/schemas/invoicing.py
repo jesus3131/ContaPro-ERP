@@ -1,8 +1,9 @@
 # Módulo: invoicing.py
 # Propósito: Esquemas Pydantic para facturación: facturas, items, DIAN
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import date, datetime
+from datetime import date
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 
 class InvoiceItemCreate(BaseModel):

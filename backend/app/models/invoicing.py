@@ -1,9 +1,11 @@
 # Modelo: Facturación
 # Propósito: Gestiona facturas de venta, notas crédito y notas débito con integración a la DIAN (facturación electrónica)
 # Tablas principales: invoices, invoice_items, credit_notes, debit_notes
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date, JSON
+from sqlalchemy import (JSON, Column, Date, DateTime, Float, ForeignKey,
+                        Integer, String, Text)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.database import Base
 
 

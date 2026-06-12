@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.orm import joinedload
 from datetime import date
-from typing import Optional
-from io import BytesIO
-from app.db.database import get_db
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
 from app.core.deps import get_current_company, require_role
-from app.models.user import Company
-from app.models.accounting import Account, AccountingEntryDetail, AccountingEntry, AccountType
-from app.models.clients import Client, Employee
+from app.db.database import get_db
+from app.models.accounting import (Account, AccountingEntry,
+                                   AccountingEntryDetail, AccountType)
+from app.models.clients import Client
 from app.models.inventory import Product
 from app.models.payroll import PayrollSettlement
+from app.models.user import Company
 from app.services.report_generator import ReportGenerator
 
 router = APIRouter()

@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
-from app.db.database import get_db
-from app.core.security import create_access_token, get_password_hash, verify_password
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.deps import get_current_user
-from app.models.user import User, Company, UserCompany
-from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserResponse, CompanyCreate, CompanyResponse, RegisterWithCompanyRequest
+from app.core.security import (create_access_token, get_password_hash,
+                               verify_password)
+from app.db.database import get_db
 from app.middleware.rate_limit import check_rate_limit
+from app.models.user import Company, User, UserCompany
+from app.schemas.auth import (CompanyCreate, CompanyResponse, LoginRequest,
+                              RegisterWithCompanyRequest, TokenResponse,
+                              UserCreate, UserResponse)
 
 router = APIRouter()
 

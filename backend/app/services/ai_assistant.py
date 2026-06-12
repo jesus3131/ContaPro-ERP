@@ -1,6 +1,7 @@
 # Módulo: ai_assistant.py
 # Propósito: Asistente de IA: análisis financiero, detección de errores, predicciones
 from openai import AsyncOpenAI
+
 from app.core.config import settings
 
 

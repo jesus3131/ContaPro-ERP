@@ -1,9 +1,11 @@
 # Modelo: Nómina
 # Propósito: Administra periodos de nómina y liquidaciones salariales con prestaciones sociales, deducciones y aportes parafiscales
 # Tablas principales: payroll_periods, payroll_settlements
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date, JSON
+from sqlalchemy import (JSON, Boolean, Column, Date, DateTime, Float,
+                        ForeignKey, Integer, String, Text)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.database import Base
 
 

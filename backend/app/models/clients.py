@@ -1,9 +1,11 @@
 # Modelo: Clientes, Proveedores y Empleados
 # Propósito: Almacena la información de terceros (clientes, proveedores y empleados) relacionados con la empresa
 # Tablas principales: clients, suppliers, employees
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date
+from sqlalchemy import (Boolean, Column, Date, DateTime, Float, ForeignKey,
+                        Integer, String, Text)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.db.database import Base
 
 

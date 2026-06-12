@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, text
-from sqlalchemy.orm import selectinload
-from typing import Optional, List
 from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.deps import get_current_company, get_current_user, require_role
 from app.db.database import get_db
-from app.core.deps import get_current_user, get_current_company, require_role
-from app.models.user import User, Company
-from app.models.accounting import Account, AccountingEntry, AccountingEntryDetail, AccountType, Closing
-from app.schemas.accounting import (
-    AccountCreate, AccountResponse, AccountingEntryCreate, AccountingEntryResponse,
-    TrialBalanceResponse, FinancialStatementResponse,
-)
+from app.models.accounting import (Account, AccountingEntry,
+                                   AccountingEntryDetail, AccountType)
+from app.models.user import Company, User
+from app.schemas.accounting import (AccountCreate, AccountingEntryCreate,
+                                    AccountingEntryResponse, AccountResponse,
+                                    FinancialStatementResponse,
+                                    TrialBalanceResponse)
 from app.services.puc_colombia import PUC_COLOMBIA
 
 router = APIRouter()
