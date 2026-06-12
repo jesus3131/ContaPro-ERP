@@ -40,22 +40,22 @@ app.include_router(dashboard.router, prefix=f"{settings.API_STR}/dashboard", tag
 
 @app.on_event("startup")
 async def startup():
+    import asyncio
     try:
-        import asyncio
-        # Add timeout to prevent hanging
-        await asyncio.wait_for(init_db(), timeout=30.0)
+        print("⏳ Connecting to database...")
+        await asyncio.wait_for(init_db(), timeout=60.0)
         print("✓ Database initialized successfully")
     except asyncio.TimeoutError:
-        print("⚠ Database initialization timed out - proceeding anyway")
+        print("⚠ Database initialization timed out (60s) - proceeding anyway")
     except Exception as e:
         print(f"⚠ Database initialization failed: {e} - proceeding anyway")
     
     try:
-        import asyncio
-        await asyncio.wait_for(seed_default_admin(), timeout=10.0)
+        print("⏳ Seeding default admin...")
+        await asyncio.wait_for(seed_default_admin(), timeout=30.0)
         print("✓ Seed data created successfully")
     except asyncio.TimeoutError:
-        print("⚠ Seed operation timed out - proceeding anyway")
+        print("⚠ Seed operation timed out (30s) - proceeding anyway")
     except Exception as e:
         print(f"⚠ Seed operation failed: {e} - proceeding anyway")
 

@@ -9,15 +9,15 @@ from app.db.database import Base
 
 
 class CostingMethod(str, enum.Enum):
-    PROMEDIO = "Promedio"
+    PROMEDIO = "PROMEDIO"
     PEPS = "PEPS"
     UEPS = "UEPS"
 
 
 class MovementType(str, enum.Enum):
-    ENTRADA = "Entrada"
-    SALIDA = "Salida"
-    AJUSTE = "Ajuste"
+    ENTRADA = "ENTRADA"
+    SALIDA = "SALIDA"
+    AJUSTE = "AJUSTE"
 
 
 class Product(Base):

@@ -9,24 +9,24 @@ from app.db.database import Base
 
 
 class AccountType(str, enum.Enum):
-    ACTIVO = "Activo"
-    PASIVO = "Pasivo"
-    PATRIMONIO = "Patrimonio"
-    INGRESO = "Ingreso"
-    GASTO = "Gasto"
-    COSTO = "Costo"
-    CUENTA_ORDEN = "Cuenta de Orden"
+    ACTIVO = "ACTIVO"
+    PASIVO = "PASIVO"
+    PATRIMONIO = "PATRIMONIO"
+    INGRESO = "INGRESO"
+    GASTO = "GASTO"
+    COSTO = "COSTO"
+    CUENTA_ORDEN = "CUENTA_ORDEN"
 
 
 class AccountNature(str, enum.Enum):
-    DEUDORA = "Deudora"
-    ACREEDORA = "Acreedora"
+    DEUDORA = "DEUDORA"
+    ACREEDORA = "ACREEDORA"
 
 
 class AccountClass(str, enum.Enum):
-    REAL = "Real"
-    NOMINAL = "Nominal"
-    ORDEN = "Orden"
+    REAL = "REAL"
+    NOMINAL = "NOMINAL"
+    ORDEN = "ORDEN"
 
 
 class Account(Base):

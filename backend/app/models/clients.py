@@ -85,7 +85,7 @@ class Employee(Base):
     eps = Column(String(100))
     afp = Column(String(100))
     ccf = Column(String(100))
-    risk_class = Column(String(10))
+    risk_class = Column(String(100))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
