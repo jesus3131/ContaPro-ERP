@@ -84,9 +84,11 @@ async def monthly_evolution(
     entries = await db.execute(
         select(
             func.extract('month', AccountingEntry.date).label('month'),
-            func.coalesce(func.sum(AccountingEntryDetail.debit), 0),
-            func.coalesce(func.sum(AccountingEntryDetail.credit), 0),
-        ).join(AccountingEntry).where(
+            func.coalesce(func.sum(AccountingEntryDetail.debit), 0).label('total_debits'),
+            func.coalesce(func.sum(AccountingEntryDetail.credit), 0).label('total_credits'),
+        ).select_from(AccountingEntryDetail).join(
+            AccountingEntry, AccountingEntryDetail.entry_id == AccountingEntry.id
+        ).where(
             AccountingEntry.company_id == company.id,
             AccountingEntry.date.between(start_of_year, end_of_year),
             AccountingEntry.is_reversed == False,

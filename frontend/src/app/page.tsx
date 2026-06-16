@@ -33,8 +33,9 @@ export default function DashboardPage() {
       setData(summary)
       setEvolution(monthly)
       setReceivable(ar)
-    } catch (err) {
-      toast('Error al cargar datos del dashboard', 'error')
+    } catch (err: any) {
+      console.error('Dashboard error:', err)
+      toast(err?.detail || 'Error al cargar datos del dashboard', 'error')
     } finally {
       setLoading(false)
     }
