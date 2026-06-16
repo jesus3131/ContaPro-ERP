@@ -33,6 +33,7 @@ export default function InventarioPage() {
       setAlerts(alts)
     } catch (err) {
       console.error(err)
+      toast('Error al cargar inventario', 'error')
     } finally {
       setLoading(false)
     }
@@ -64,6 +65,7 @@ export default function InventarioPage() {
       setDeleteConfirm(null)
       loadData()
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al eliminar producto', 'error')
     }
   }

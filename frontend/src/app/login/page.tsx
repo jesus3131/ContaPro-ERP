@@ -40,6 +40,7 @@ export default function LoginPage() {
       localStorage.setItem('token', res.access_token)
       goToDashboard(res.company_id)
     } catch (err: any) {
+      console.error(err)
       setError(err.message || 'Error al iniciar sesión')
     } finally {
       setLoading(false)
@@ -63,6 +64,7 @@ export default function LoginPage() {
       localStorage.setItem('token', res.access_token)
       goToDashboard(res.company_id)
     } catch (err: any) {
+      console.error(err)
       setError(err.message || 'Error al registrarse')
     } finally {
       setLoading(false)

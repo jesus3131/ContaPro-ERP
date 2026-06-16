@@ -72,6 +72,7 @@ export default function ReportesPage() {
       await api.reports.download(reportId, format, s, e)
       toast('Reporte descargado exitosamente', 'success')
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al descargar reporte', 'error')
     } finally {
       setGenerating(null)
@@ -93,7 +94,7 @@ export default function ReportesPage() {
       const data = await api.reports.data(reportId, s, e)
       setChartData(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      setChartError(err.message || 'Error al cargar datos')
+      console.error(err)
       setChartData(null)
     } finally {
       setChartLoading(false)

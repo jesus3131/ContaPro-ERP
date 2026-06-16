@@ -2,7 +2,7 @@ import calendar
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_company, require_role
@@ -42,8 +42,8 @@ async def dashboard_summary(
     invoices = await db.execute(
         select(func.count(Invoice.id), func.coalesce(func.sum(Invoice.total), 0)).where(
             Invoice.company_id == company.id,
-            func.extract('year', Invoice.issue_date) == year,
-            func.extract('month', Invoice.issue_date) == month,
+            extract('year', Invoice.issue_date) == year,
+            extract('month', Invoice.issue_date) == month,
         )
     )
     inv_row = invoices.one()
@@ -83,7 +83,7 @@ async def monthly_evolution(
 
     entries = await db.execute(
         select(
-            func.extract('month', AccountingEntry.date).label('month'),
+            extract('month', AccountingEntry.date).label('month'),
             func.coalesce(func.sum(AccountingEntryDetail.debit), 0).label('total_debits'),
             func.coalesce(func.sum(AccountingEntryDetail.credit), 0).label('total_credits'),
         ).select_from(AccountingEntryDetail).join(
@@ -92,7 +92,7 @@ async def monthly_evolution(
             AccountingEntry.company_id == company.id,
             AccountingEntry.date.between(start_of_year, end_of_year),
             AccountingEntry.is_reversed == False,
-        ).group_by(func.extract('month', AccountingEntry.date))
+        ).group_by(extract('month', AccountingEntry.date))
     )
 
     totals_by_month = {

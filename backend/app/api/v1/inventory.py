@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_company, get_current_user, require_role
 from app.db.database import get_db
 from app.models.inventory import (CostingMethod, InventoryMovement, Kardex,
-                                  Product)
+                                  MovementType, Product)
 from app.models.user import Company, User
 from app.schemas.inventory import (InventoryMovementCreate, KardexResponse,
                                    ProductCreate, ProductResponse,
@@ -135,7 +135,7 @@ async def create_movement(
     db.add(movement)
     await db.flush()
 
-    if request.movement_type == "Entrada":
+    if request.movement_type == MovementType.ENTRADA:
         if product.costing_method == CostingMethod.PROMEDIO:
             new_total = (product.current_stock * product.cost_price) + total_cost
             new_qty = product.current_stock + request.quantity
@@ -143,7 +143,7 @@ async def create_movement(
         product.current_stock += request.quantity
         entry_qty, entry_cost = request.quantity, request.unit_cost
         output_qty, output_cost = 0, 0
-    elif request.movement_type == "Salida":
+    elif request.movement_type == MovementType.SALIDA:
         product.current_stock -= request.quantity
         entry_qty, entry_cost = 0, 0
         output_qty, output_cost = request.quantity, product.cost_price

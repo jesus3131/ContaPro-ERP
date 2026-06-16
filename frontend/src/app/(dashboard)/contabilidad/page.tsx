@@ -30,6 +30,7 @@ export default function ContabilidadPage() {
       setEntries(ents)
     } catch (err) {
       console.error(err)
+      toast('Error al cargar datos contables', 'error')
     } finally {
       setLoading(false)
     }
@@ -49,6 +50,7 @@ export default function ContabilidadPage() {
       toast('PUC cargado exitosamente', 'success')
       loadData()
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al cargar PUC', 'error')
     }
   }

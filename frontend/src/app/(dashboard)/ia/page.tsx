@@ -25,6 +25,7 @@ export default function IAPage() {
       setAnalysis(res.analysis || 'No se pudo generar el análisis')
       toast('Análisis financiero completado', 'success')
     } catch (err) {
+      console.error(err)
       setAnalysis('Error al conectar con el asistente IA')
       toast('Error al conectar con el asistente IA', 'error')
     } finally {
@@ -39,7 +40,7 @@ export default function IAPage() {
       setErrors(res)
       toast(`Revisión completada: ${res?.errors_detected || 0} errores encontrados`, res?.errors_detected > 0 ? 'warning' : 'success')
     } catch (err) {
-      setErrors({ error: 'Error al detectar errores' })
+      console.error(err)
       toast('Error al detectar errores contables', 'error')
     } finally {
       setLoading(null)
@@ -53,6 +54,7 @@ export default function IAPage() {
       setPrediction(res.prediction || 'No se pudo generar la predicción')
       toast('Predicción de flujo de caja generada', 'success')
     } catch (err) {
+      console.error(err)
       setPrediction('Error al generar predicción')
       toast('Error al generar predicción', 'error')
     } finally {
@@ -67,7 +69,7 @@ export default function IAPage() {
       setReport(res.report || 'No se pudo generar el reporte')
       toast('Reporte ejecutivo generado exitosamente', 'success')
     } catch (err) {
-      setReport('Error al generar reporte')
+      console.error(err)
       toast('Error al generar reporte ejecutivo', 'error')
     } finally {
       setLoading(null)

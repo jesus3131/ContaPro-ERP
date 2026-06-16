@@ -25,6 +25,7 @@ export default function FacturacionPage() {
       setInvoices(data)
     } catch (err) {
       console.error(err)
+      toast('Error al cargar facturas', 'error')
     } finally {
       setLoading(false)
     }
@@ -38,6 +39,7 @@ export default function FacturacionPage() {
       toast('Factura enviada a DIAN exitosamente', 'success')
       loadInvoices()
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al enviar a DIAN', 'error')
     }
   }
@@ -49,6 +51,7 @@ export default function FacturacionPage() {
       toast('Factura anulada exitosamente', 'success')
       loadInvoices()
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al anular factura', 'error')
     }
   }

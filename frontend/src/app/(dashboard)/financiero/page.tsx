@@ -19,6 +19,7 @@ export default function FinancieroPage() {
   useEffect(() => {
     setLoading(true)
     api.financial.indicators(new Date().getFullYear()).then(setIndicators).catch((err) => {
+      console.error(err)
       toast(err.message || 'Error al cargar indicadores financieros', 'error')
     }).finally(() => setLoading(false))
   }, [])

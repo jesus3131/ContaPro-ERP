@@ -118,8 +118,11 @@ async def create_entry(
     last_num = last_entry.scalar()
     next_num = 1
     if last_num:
-        parts = last_num.split("-")
-        next_num = int(parts[-1]) + 1
+        try:
+            parts = last_num.split("-")
+            next_num = int(parts[-1]) + 1
+        except (ValueError, IndexError):
+            next_num = 1
 
     entry_number = f"CP-{request.date.strftime('%Y%m')}-{next_num:04d}"
 

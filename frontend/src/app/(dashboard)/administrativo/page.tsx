@@ -27,19 +27,19 @@ export default function AdminPage() {
 
   const loadClients = useCallback(async () => {
     setLoading(true)
-    try { setClients(await api.clients.list()) } catch (err) { console.error(err) }
+    try { setClients(await api.clients.list()) } catch (err) { console.error(err); toast('Error al cargar clientes', 'error') }
     finally { setLoading(false) }
   }, [])
 
   const loadSuppliers = useCallback(async () => {
     setLoading(true)
-    try { setSuppliers(await api.suppliers.list()) } catch (err) { console.error(err) }
+    try { setSuppliers(await api.suppliers.list()) } catch (err) { console.error(err); toast('Error al cargar proveedores', 'error') }
     finally { setLoading(false) }
   }, [])
 
   const loadEmployees = useCallback(async () => {
     setLoading(true)
-    try { setEmployees(await api.employees.list()) } catch (err) { console.error(err) }
+    try { setEmployees(await api.employees.list()) } catch (err) { console.error(err); toast('Error al cargar empleados', 'error') }
     finally { setLoading(false) }
   }, [])
 
@@ -69,6 +69,7 @@ export default function AdminPage() {
       setDeleteConfirm(null)
       handleSave()
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al eliminar registro', 'error')
     }
   }

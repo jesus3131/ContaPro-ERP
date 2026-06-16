@@ -24,6 +24,7 @@ export default function NominaPage() {
       setPeriodId(res.id)
       toast('Período de nómina creado exitosamente', 'success')
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al crear período', 'error')
     } finally {
       setLoading(false)
@@ -39,6 +40,7 @@ export default function NominaPage() {
       setSettlements(s)
       toast('Nómina liquidada exitosamente', 'success')
     } catch (err: any) {
+      console.error(err)
       toast(err.message || 'Error al liquidar nómina', 'error')
     } finally {
       setLoading(false)
