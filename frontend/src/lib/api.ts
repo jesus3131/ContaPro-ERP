@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export interface ApiError {
   status: number;
@@ -145,7 +145,8 @@ export const api = {
       const params: string[] = [];
       if (start) params.push(`start_date=${start}`);
       if (end) params.push(`end_date=${end}`);
-      if (params.length) ep += `?${params.join("&")}`;
+      params.push('format=json');
+      ep += `?${params.join("&")}`;
       return apiFetch(ep);
     },
   },
