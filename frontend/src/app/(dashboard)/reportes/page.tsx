@@ -40,6 +40,221 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
+function ReportChart({ reportId, chartData, chartLoading, chartError }: {
+  reportId: string
+  chartData: any[] | null
+  chartLoading: boolean
+  chartError: string
+}) {
+  if (chartLoading) return <div className="flex items-center justify-center h-64 text-gray-400"><div className="animate-spin w-6 h-6 border-2 border-[#062B5B] dark:border-[#6EEB83] border-t-transparent rounded-full mr-2" /> Cargando...</div>
+  if (chartError) return <div className="flex items-center justify-center h-64 text-red-500 gap-2"><AlertCircle className="w-5 h-5" /> {chartError}</div>
+  if (!chartData || chartData.length === 0) return <div className="flex items-center justify-center h-64 text-gray-400">Sin datos disponibles para este período</div>
+
+  if (reportId === 'balance-sheet') {
+    const byType = chartData.reduce((acc: any, item: any) => {
+      const t = item.type || 'Otros'
+      if (!acc[t]) acc[t] = 0
+      acc[t] += Math.abs(item.balance || 0)
+      return acc
+    }, {})
+    const pieData = Object.entries(byType).map(([name, value]) => ({ name, value }))
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Distribución por tipo</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
+                {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Detalle por cuenta</h4>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData.slice(0, 15)} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis type="number" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+              <YAxis type="category" dataKey="name" width={120} className="text-xs" tick={{ fontSize: 10 }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="balance" name="Saldo" radius={[0, 4, 4, 0]}>
+                {chartData.slice(0, 15).map((entry: any, i: number) => (
+                  <Cell key={i} fill={TYPE_COLORS[entry.type] || CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    )
+  }
+
+  if (reportId === 'income-statement') {
+    const byType = chartData.reduce((acc: any, item: any) => {
+      const t = item.type || 'Otros'
+      if (!acc[t]) acc[t] = 0
+      acc[t] += Math.abs(item.balance || 0)
+      return acc
+    }, {})
+    const barData = Object.entries(byType).map(([name, value]) => ({ name, value }))
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={barData}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+            <XAxis dataKey="name" className="text-xs" />
+            <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+            <Tooltip content={<ChartTooltip />} />
+            <Bar dataKey="value" name="Monto" radius={[4, 4, 0, 0]}>
+              {barData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie data={barData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
+              {barData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+            </Pie>
+            <Tooltip content={<ChartTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  if (reportId === 'cash-flow') {
+    const lineData = chartData.map((item: any, i: number) => ({ name: item.category || item.name || `Item ${i + 1}`, value: item.amount || item.balance || 0 }))
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={lineData}>
+          <defs>
+            <linearGradient id="cfGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <XAxis dataKey="name" className="text-xs" />
+          <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+          <Tooltip content={<ChartTooltip />} />
+          <Area type="monotone" dataKey="value" name="Monto" stroke="#06b6d4" fill="url(#cfGradient)" strokeWidth={2} />
+        </AreaChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (reportId === 'trial-balance') {
+    return (
+      <div className="overflow-x-auto max-h-80 overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+            <tr>
+              <th className="text-left px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Código</th>
+              <th className="text-left px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Cuenta</th>
+              <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Débito</th>
+              <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Crédito</th>
+              <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {chartData.map((item: any, i: number) => (
+              <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.code}</td>
+                <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.name}</td>
+                <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.debit || 0)}</td>
+                <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.credit || 0)}</td>
+                <td className="px-3 py-2 text-right font-medium" style={{ color: (item.balance || 0) >= 0 ? '#10b981' : '#ef4444' }}>{formatCurrency(item.balance || 0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  if (reportId === 'accounts-receivable') {
+    const barData = chartData.slice(0, 10).map((item: any) => ({ name: item.name, value: item.credit_limit || 0 }))
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={barData} layout="vertical">
+          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <XAxis type="number" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+          <YAxis type="category" dataKey="name" width={140} className="text-xs" tick={{ fontSize: 10 }} />
+          <Tooltip content={<ChartTooltip />} />
+          <Bar dataKey="value" name="Límite de crédito" fill="#FBBF24" radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (reportId === 'inventory-report') {
+    const barData = chartData.slice(0, 15).map((item: any) => ({ name: item.name, stock: item.stock || 0, value: (item.stock || 0) * (item.cost || 0) }))
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={barData}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
+          <YAxis className="text-xs" />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend />
+          <Bar dataKey="stock" name="Stock" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" name="Valor total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (reportId === 'payroll-report') {
+    const barData = chartData.slice(0, 10).map((item: any) => ({ name: item.employee, gross: item.gross || 0, deductions: item.deductions || 0, net: item.net || 0 }))
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={barData}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
+          <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend />
+          <Bar dataKey="gross" name="Salario bruto" fill="#ec4899" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="deductions" name="Deducciones" fill="#ef4444" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="net" name="Neto" fill="#10b981" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    )
+  }
+
+  if (reportId === 'tax-report') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+            <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} />
+            <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend />
+            <Bar dataKey="debit" name="Débito" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="credit" name="Crédito" fill="#ef4444" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie data={chartData.map((item: any) => ({ name: item.code, value: Math.abs(item.balance || 0) }))}
+              cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
+              {chartData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+            </Pie>
+            <Tooltip content={<ChartTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  return null
+}
+
 export default function ReportesPage() {
   const { toast } = useToast()
   const now = new Date()
@@ -96,6 +311,9 @@ export default function ReportesPage() {
     } catch (err: any) {
       console.error(err)
       setChartData(null)
+      const msg = err?.detail || err?.message || 'Error al cargar datos del reporte'
+      setChartError(msg)
+      toast(msg, 'error')
     } finally {
       setChartLoading(false)
     }
@@ -111,216 +329,6 @@ export default function ReportesPage() {
     { id: 'payroll-report', name: 'Nómina', description: 'Liquidación de nómina y prestaciones', icon: Wallet, color: '#ec4899' },
     { id: 'tax-report', name: 'Impuestos', description: 'IVA, Retención en la fuente e ICA', icon: FileText, color: '#EF4444' },
   ]
-
-  function renderChart(reportId: string) {
-    if (chartLoading) return <div className="flex items-center justify-center h-64 text-gray-400"><div className="animate-spin w-6 h-6 border-2 border-[#062B5B] dark:border-[#6EEB83] border-t-transparent rounded-full mr-2" /> Cargando...</div>
-    if (chartError) return <div className="flex items-center justify-center h-64 text-red-500 gap-2"><AlertCircle className="w-5 h-5" /> {chartError}</div>
-    if (!chartData || chartData.length === 0) return <div className="flex items-center justify-center h-64 text-gray-400">Sin datos disponibles para este período</div>
-
-    if (reportId === 'balance-sheet') {
-      const byType = chartData.reduce((acc: any, item: any) => {
-        const t = item.type || 'Otros'
-        if (!acc[t]) acc[t] = 0
-        acc[t] += Math.abs(item.balance || 0)
-        return acc
-      }, {})
-      const pieData = Object.entries(byType).map(([name, value]) => ({ name, value }))
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Distribución por tipo</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
-                  {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Detalle por cuenta</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData.slice(0, 15)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                <XAxis type="number" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-                <YAxis type="category" dataKey="name" width={120} className="text-xs" tick={{ fontSize: 10 }} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="balance" name="Saldo" radius={[0, 4, 4, 0]}>
-                  {chartData.slice(0, 15).map((entry: any, i: number) => (
-                    <Cell key={i} fill={TYPE_COLORS[entry.type] || CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )
-    }
-
-    if (reportId === 'income-statement') {
-      const byType = chartData.reduce((acc: any, item: any) => {
-        const t = item.type || 'Otros'
-        if (!acc[t]) acc[t] = 0
-        acc[t] += Math.abs(item.balance || 0)
-        return acc
-      }, {})
-      const barData = Object.entries(byType).map(([name, value]) => ({ name, value }))
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={barData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-              <XAxis dataKey="name" className="text-xs" />
-              <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="value" name="Monto" radius={[4, 4, 0, 0]}>
-                {barData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={barData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
-                {barData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip content={<ChartTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    }
-
-    if (reportId === 'cash-flow') {
-      const lineData = chartData.map((item: any, i: number) => ({ name: item.category || item.name || `Item ${i + 1}`, value: item.amount || item.balance || 0 }))
-      return (
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={lineData}>
-            <defs>
-              <linearGradient id="cfGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis dataKey="name" className="text-xs" />
-            <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-            <Tooltip content={<ChartTooltip />} />
-            <Area type="monotone" dataKey="value" name="Monto" stroke="#06b6d4" fill="url(#cfGradient)" strokeWidth={2} />
-          </AreaChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (reportId === 'trial-balance') {
-      return (
-        <div className="overflow-x-auto max-h-80 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-              <tr>
-                <th className="text-left px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Código</th>
-                <th className="text-left px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Cuenta</th>
-                <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Débito</th>
-                <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Crédito</th>
-                <th className="text-right px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-semibold">Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chartData.map((item: any, i: number) => (
-                <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                  <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.code}</td>
-                  <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.name}</td>
-                  <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.debit || 0)}</td>
-                  <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.credit || 0)}</td>
-                  <td className="px-3 py-2 text-right font-medium" style={{ color: (item.balance || 0) >= 0 ? '#10b981' : '#ef4444' }}>{formatCurrency(item.balance || 0)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    if (reportId === 'accounts-receivable') {
-      const barData = chartData.slice(0, 10).map((item: any) => ({ name: item.name, value: item.credit_limit || 0 }))
-      return (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={barData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis type="number" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-            <YAxis type="category" dataKey="name" width={140} className="text-xs" tick={{ fontSize: 10 }} />
-            <Tooltip content={<ChartTooltip />} />
-            <Bar dataKey="value" name="Límite de crédito" fill="#FBBF24" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (reportId === 'inventory-report') {
-      const barData = chartData.slice(0, 15).map((item: any) => ({ name: item.name, stock: item.stock || 0, value: (item.stock || 0) * (item.cost || 0) }))
-      return (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={barData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
-            <YAxis className="text-xs" />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend />
-            <Bar dataKey="stock" name="Stock" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="value" name="Valor total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (reportId === 'payroll-report') {
-      const barData = chartData.slice(0, 10).map((item: any) => ({ name: item.employee, gross: item.gross || 0, deductions: item.deductions || 0, net: item.net || 0 }))
-      return (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={barData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
-            <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-            <Tooltip content={<ChartTooltip />} />
-            <Legend />
-            <Bar dataKey="gross" name="Salario bruto" fill="#ec4899" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="deductions" name="Deducciones" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="net" name="Neto" fill="#10b981" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      )
-    }
-
-    if (reportId === 'tax-report') {
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-              <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 10 }} />
-              <YAxis tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} className="text-xs" />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend />
-              <Bar dataKey="debit" name="Débito" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="credit" name="Crédito" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={chartData.map((item: any) => ({ name: item.code, value: Math.abs(item.balance || 0) }))}
-                cx="50%" cy="50%" outerRadius={100} dataKey="value" label>
-                {chartData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Pie>
-              <Tooltip content={<ChartTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    }
-
-    return null
-  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -401,7 +409,7 @@ export default function ReportesPage() {
             </div>
             {selectedReport === report.id && (
               <div className="border-t border-gray-100 dark:border-gray-800 p-5 animate-slide-up">
-                {renderChart(report.id)}
+                <ReportChart reportId={report.id} chartData={chartData} chartLoading={chartLoading} chartError={chartError} />
               </div>
             )}
           </div>
