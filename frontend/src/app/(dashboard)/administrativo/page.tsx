@@ -157,6 +157,13 @@ export default function AdminPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
+            {loading ? (
+              <div className="p-6 space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : (
             <table className="table-premium">
               <thead>
                 <tr>
@@ -205,6 +212,7 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+            )}
           </div>
         </CardContent>
       </Card>
